@@ -19,7 +19,7 @@ typeof可以测试出number、string、boolean、Symbol、undefined及function�
 
 ##### >>> 延伸问题：typeof NaN 结果是什么？以及为什么
 
-- 答案是NaN，为什么呢？因为IEEE-754标准，64位浮点数，当指数位全为1, 表示非数字(NaN Not a Number),诸如0除以0的结果。
+- 答案是number，为什么呢？因为IEEE-754标准，64位浮点数，当指数位全为1, 表示非数字(NaN Not a Number),诸如0除以0的结果。
 
 ##### >>> 延伸问题： 为什么string这种基础类型居然还能调用方法，例如'a'.indexOf('a'), 方法调用不是对象才有的能力吗？
 
