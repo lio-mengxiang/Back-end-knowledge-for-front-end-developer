@@ -63,15 +63,15 @@ Hi, 大家好, 本系列文章的目的是教你如何通过【字节/阿里/腾
 
 模块机制详细分析文章可以参考我之前写的一篇文章[NodeJS有难度的面试题，你能答对几个？](https://juejin.cn/post/6844903951742025736),最开始就讨论了commonjs的模块机制。
 
-* [模块机制](/src/error.md)
+* [模块机制](/src/module.md)
   - 请介绍一下node里的模块是什么
   - 请介绍一下require的模块加载机制
-* [热更新](/src/error.md)
+* [热更新](/src/module.md)
   - 如何在不重启 node 进程的情况下热更新一个 js/json 文件? 这个问题本身是否有问题?
-* [上下文](/src/error.md)
+* [上下文](/src/module.md)
   - 每个require的js文件，作用域如何保证独立呢？
   - 知道vm模块有什么用吗？
-* [包管理](/src/error.md)
+* [包管理](/src/module.md)
   - npm包管理下，node_modules里安装的包是按什么结构和逻辑整理目录的
 
 
