@@ -41,10 +41,10 @@ Hi, 大家好, 本系列文章的目的是教你如何通过【字节/阿里/腾
     - 二叉树层次遍历
 
 * [linux](/src/linux.md)
- - linux这边常用的查看日志的指令
- - linux下进程间通信方式？管道、共享内存什么场景下会用？两个进程不在同一个机器如何通信？
- - 何查看linux进程信息，其中vsz和rss有什么区别？
- - [more](/src/linux.md)
+  - linux这边常用的查看日志的指令
+  - linux下进程间通信方式？管道、共享内存什么场景下会用？两个进程不在同一个机器如何通信？
+  - 何查看linux进程信息，其中vsz和rss有什么区别？
+    - [more](/src/linux.md)
 ## [Js 基础问题](/src/common.md)
 
 
@@ -236,6 +236,7 @@ Node.js 是以 IO 密集型业务著称. 那么问题来了, 你真的了解什�
 * [Sql/Nosql 注入](/src/security.md)
   - 为什么会产生sql注入
 
+## [nginx](/src/nginx.md)
 
 ## 最后
 
