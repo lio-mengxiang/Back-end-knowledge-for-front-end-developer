@@ -1,22 +1,33 @@
-# 模块
+## 前言
+本文收录在[node.js大前端面试题的github项目中](https://link.juejin.cn/?target=https%3A%2F%2Fgithub.com%2Flio-mengxiang%2Fnode-interview "https://github.com/lio-mengxiang/node-interview")
 
-* [模块机制]
-* [热更新]
-* [上下文]
-* [包管理]
-
-## 常见问题
+## 热更新
 
 
 > <a name="q-hot"></a> 如何在不重启 node 进程的情况下热更新一个 js/json 文件? 这个问题本身是否有问题?
 
-可以清除掉 `require.cache` 的缓存重新 `require(xxx)`, 视具体情况还可以用 VM 模块重新执行.
+node.js缓存和热更新密切相关，我们先简单看下Node.js的模块机制（下图来源于[hyj1991](https://www.zhihu.com/people/yijun1991)大神）。
 
-使用 js 实现热更新很容易碰到 v8 优化之后各地拿到缓存的引用导致热更新 js 没意义. 当然热更新 json 还是可以简单一点比如用读取文件的方式来热更新, 但是这样也不如从 redis 之类的数据库中读取比较合理.
+简单的说就是，require A模块之后，会把A模块放入到缓存里，第二次取的时候就取缓存了，所以你仅仅改变了文件并不会让这个文件重新加载，所以我们就需要把缓存去掉，让这个文件能重新加载。
 
-以上是饿了么团队的答案，其实真实的热更新的问题比上面说的要麻烦的多，后面我们在热更新这一小节详细说，基本把之前饿了么团队的内容全新重写了。
+![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/60305afd8769483ba4b27222bf1c5f08~tplv-k3u1fbpfcp-zoom-1.image)
+
+
+简单地说父模块 A 引入子模块 B 的步骤如下：
+
+-   判断子模块 B 缓存是否存在
+-   如果不存在则对 B 进行编译解析
+-   -   添加 B 模块缓存至 `require.cache`（其中 key 为模块 B 的全路径）
+    -   添加 B 模块引用至父模块 A 的 `children` 数组中
+-   如果存在，判断父模块 A 的 `children` 数组中是否存在 B，如不存在则添加 B 模块引用。
+
+所以在node.js做热更新是十分麻烦的，一些库做的也不够好。这个问题的终极解决方案是借助一些第三方工具，例如k8s，k8s可以轻松实现滚动升级，也就是如果要做热更新，k8s会把新的服务起起来，然后把流量切换到新的服务上（pod上），然后老服务再关闭。
+
+
+不过热更新 json 之类的配置文件的话, 还是可以简单的实现的, 可以直接存到后端的数据库里，这样就避免node.js的缓存问题了。
 
 ## 模块机制
+模块机制太常见的问题了，下面我们需要搞清楚什么是commonjs的实现原理。
 
 模块机制详细分析文章可以参考我之前写的一篇文章[NodeJS有难度的面试题，你能答对几个？](https://juejin.cn/post/6844903951742025736),最开始就讨论了commonjs的模块机制。
 
@@ -213,17 +224,6 @@ module.exports = function () { return 'foo'; };
 最终，我们强烈建议使用module.exports = xxx的方式来输出模块变量，这样，你只需要记忆一种方法。
 
 
-## 热更新
-
-这篇文章算是对node热更新非常容易让人明白原理和问题的文章了[浅谈nodejs热更新](https://zhuanlan.zhihu.com/p/460359101)，比饿了么大前端原本的答案强太多了，我自己也不班门弄斧了。
-
-我这里会简述一下为什么nodejs中，js文件的的热更新并不是简单的把文件内容改了就可以。
-
-在 Node.js 中做热更新代码, 牵扯到的知识点可能主要是 `require` 会有一个 `cache`, 有这个 `cache` 在, 即使你更新了 `.js` 文件, 在代码中再次 `require` 还是会拿到之前的编译好缓存在 v8 内存 (code space) 中的的旧代码. 但是如果只是单纯的清除掉 `require` 中的 `cache`, 再次 `require` 确实能拿到新的代码, 但是这时候很容易碰到各地维持旧的引用依旧跑的旧的代码的问题. 如果还要继续推行这种热更新代码的话, 可能要推翻当前的架构, 从头开始从新设计一下目前的框架.
-
-
-不过热更新 json 之类的配置文件的话, 还是可以简单的实现的, 更新 `require` 的 `cache` 可以实现, 不会有持有旧引用的问题, 但是如果旧的引用一直被持有很容易出现内存泄漏, 而要热更新配置的话, 为什么不存数据库? 通过更新文件还要再发布一次, 但是存数据库直接写个接口配个界面多爽你说是不是?
-
 
 
 ## 上下文 Vm模块
@@ -240,7 +240,7 @@ module.exports = function () { return 'foo'; };
 - Function
 - vm
 
- eval、Function，在执行目标代码时，会有一个最大的问题就是安全性，无论如何目标代码不能影响我正常的服务，也就是说，这个执行环节得是一个沙盒环境，而eval显然并不具备这个能力。如果需要一段不信任的代码放任它执行，那么不光服务，整个服务器的文件系统、数据库都暴露了。甚至目标代码会修改eval函数原型，埋入陷阱等等。
+ eval、Function，在执行目标代码时，会有一个最大的问题就是安全性，无论如何目标代码不能影响我正常的服务，也就是说，这个执行环境得是一个沙盒环境，而eval显然并不具备这个能力。如果需要一段不信任的代码放任它执行，那么不光服务，整个服务器的文件系统、数据库都暴露了。甚至目标代码会修改eval函数原型，埋入陷阱等等。
 
 function也有一个安全问题就是可以修改全局变量，所有这种new Function的代码执行时的作用域为全局作用域，不论它的在哪个地方调用的，它访问的都是全局变量。
 
@@ -274,7 +274,7 @@ npm的包管理机制你一定要了解，不仅仅是node需要，我们前端�
 在 npm 的早期版本中，npm 处理依赖的方式简单粗暴，以递归的方式，严格按照 package.json 结构以及子依赖包的 package.json 结构将依赖安装到他们各自的 node_modules 中。
 
 如下图：
-![](https://wxsm.space/2021/npm-history/bd96f102244c4a498c544bf759266e81.png)
+![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/acd85490d2b8499e9befb5f85b7deb94~tplv-k3u1fbpfcp-zoom-1.image)
 这样的方式优点很明显， node_modules 的结构和 package.json 结构一一对应，层级结构明显，并且保证了每次安装目录结构都是相同的。
 
 从上图这种情况，我们不难得出嵌套结构拥有以下缺点：
@@ -324,11 +324,11 @@ node_modules
 
 想象一下有一个 library-a，它同时依赖了 library-b、c、d、e：
 
-![](https://wxsm.space/2021/npm-history/17d47edd486b4a67ad6462bacd1a4c94.png)
+![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/d9c85b4f8ba24af5b378524ca84a2b21~tplv-k3u1fbpfcp-zoom-1.image)
 
 而 b 和 c 依赖了 f@1.0.0，d 和 e 依赖了 f@2.0.0：
 
-![](https://wxsm.space/2021/npm-history/9eb92971cb044cb3a05c62a43dd23142.png)
+![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/4f931116f93a4bbf87bf7a092660afc7~tplv-k3u1fbpfcp-zoom-1.image)
 
 这时候，node_modules 树需要做出选择了，到底是将 f@1.0.0 还是 f@2.0.0 扁平化，然后将另一个放到嵌套的 node_modules 中？
 
