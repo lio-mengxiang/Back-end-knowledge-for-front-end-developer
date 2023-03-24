@@ -83,7 +83,7 @@ console.log(Function.prototype === Object.__proto__) // ?
 答案：全是true，至于为啥，可能要写一篇很长的文章了，留给大家去思索吧。（简单记忆，所有函数最终都收敛到Function.prototype，所有对象都收敛到Object.prototype，或者说null）
 
 下图应该能解释：
-![image](https://user-images.githubusercontent.com/26076975/227404817-999e456a-c3f7-4522-b205-278d5ebab55c.png)
+![image](./src/227404817-999e456a-c3f7-4522-b205-278d5ebab55c.png)
 
 
 ## 作用域
