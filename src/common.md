@@ -82,6 +82,10 @@ console.log(Function.prototype === Object.__proto__) // ?
 
 答案：全是true，至于为啥，可能要写一篇很长的文章了，留给大家去思索吧。（简单记忆，所有函数最终都收敛到Function.prototype，所有对象都收敛到Object.prototype，或者说null）
 
+下图应该能解释：
+![image](https://user-images.githubusercontent.com/26076975/227404817-999e456a-c3f7-4522-b205-278d5ebab55c.png)
+
+
 ## 作用域
 
 作用域是指程序源代码中定义变量的区域。在这个区域内，变量有自己的访问权限。在javascript中，采取的是静态作用域
