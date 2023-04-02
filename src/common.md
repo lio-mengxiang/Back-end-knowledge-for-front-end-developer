@@ -382,6 +382,38 @@ function out() {
 
 简单来说，就是使用heapdump.writeSnapshot，来打印内存泄露前的情况，然后对比打印前和打印后哪些变量存储的数据直线上涨，然后devtool有代码连接，就可以仔细分析具体代码了。
 
+举个例子，对比内存快照找出泄漏位置
+
+通过内存快照找到数量不断增加的对象，找到增加对象是被谁给引用，找到问题代码，改正之后就行，具体问题具体分析，这里通过我们在工作中遇到的情况来讲解。
+```
+const {EventEmitter} = require('events');
+const heapdump = require('heapdump');
+​
+global.test = new EventEmitter();
+heapdump.writeSnapshot('./' + Date.now() + '.heapsnapshot');
+​
+function run3() {
+  const innerData = new Buffer(100);
+  const outClosure3 = function () {
+    void innerData;
+  };
+  test.on('error', () => {
+    console.log('error');
+  });
+  outClosure3();
+}
+​
+for(let i = 0; i < 10; i++) {
+  run3();
+}
+gc();
+
+heapdump.writeSnapshot('./' + Date.now() + '.heapsnapshot');
+```
+这里是对错误代码的最小重现代码。
+
+首先使用 `node --expose-gc index.js` 运行代码，将会得到两个内存快照，之后打开 devtool，点击 profile，载入内存快照。打开对比，Delta 会显示对象的变化情况，如果对象 Delta 一直增长，就很有可能是内存泄漏了。
+
 ## ES6 新特性
 
 推荐阅读阮一峰的 [《ECMAScript 6 入门》](http://es6.ruanyifeng.com/)
