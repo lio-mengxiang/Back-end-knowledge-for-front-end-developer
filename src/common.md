@@ -266,7 +266,7 @@ foo();
 详细原理参考这篇文章：https://juejin.cn/post/7079995358624874509
 
 
-来个终极闭包难度面试题,摘自上文连接，想知道原理可以进去看
+来个终极闭包难度面试题，下面详细解释一下以下代码为什么会产生闭包
 ```javascript
 let theThing = null;
 let replaceThing = function () {
@@ -289,6 +289,8 @@ while(index < 100){
     index++;
 }
 ```
+主要原因是leak产生了闭包，theThing跟unused共享了这个闭包，因为theThing被最外层引用不能回收，所以leak不会被回收。
+
 ## 引用传递
 
 > <a name="q-value"></a> js 中什么类型是引用传递, 什么类型是值传递? 如何将值类型的变量以引用的方式传递?
