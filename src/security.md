@@ -175,7 +175,7 @@ c.public.com
 
 不常见的还有强力的互相认证, 你确认他之后, 他也确认你一下; 延迟测试, 统计传输时间, 如果通讯延迟过高则认为可能存在第三方中间人; 等等.
 
-## SQL/NoSQL 注入
+## SQL 注入
 
 注入攻击是指当所执行的一些操作中有部分由用户传入时, 用户可以将其恶意逻辑注入到操作中. 当你使用 eval, new Function 等方式执行的字符串中有用户输入的部分时, 就可能被注入攻击. 上文中的 XSS 就属于一种注入攻击. 前面的章节中也提到过 Node.js 的 child_process.exec 由于调用 bash 解析, 如果执行的命令中有部分属于用户输入, 也可能被注入攻击.
 
@@ -193,28 +193,9 @@ SELECT * FROM users WHERE usernae = 'myName' AND password = 'mySecret';
 SELECT * FROM users WHERE usernae = 'myName' AND password = ''; DROP TABLE users; --';
 ```
 
-其能实现的功能, 包括但不限于删除数据 (经济损失), 篡改数据 (密码等), 窃取数据 (网站管理权限, 用户数据) 等. 防治手段常见于:
+防止的手段目前普遍都采用参数化查询。比如mysql，是本身就有的功能。
 
-* 给表名/字段名加前缀 (避免被猜到)
-* 报错隐藏表信息 (避免被看到, 12306 早期就出现过的问题)
-* 过滤可以拼接 SQL 的关键字符
-* 对用户输入进行转义
-* 验证用户输入的类型 (避免 limit, order by 等注入)
-* 等...
+在使用参数化查询的情况下，数据库服务器不会将参数的内容视为SQL指令的一部份来处理，而是在数据库完成SQL指令的编译后，才套用参数运行，因此就算参数中含有指令，也不会被数据库运行
 
-### NoSQL
-
-看个简单的情况:
-
-```javascript
-let {user, pass, age} = ctx.query;
-
-db.collection.find({
-  user, pass,
-  $where: `this.age >= ${age}`
-})
-```
-
-那么这里的 age 就可以注入了. 另外 GET/POST 还可以传递深层结构 (比如 ?name[0]=alan 传递上来), 通过 qs 之类的模块解析后导致注入, 如 [cnodejs 遭遇 mongodb 注入](https://github.com/cnodejs/nodeclub/commit/0f6cc14f6bcbbe6b4de3199c6896efaec637693e).
 
 
