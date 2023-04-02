@@ -138,7 +138,7 @@ function asyncReduce(listPromise) {
 }
 ```
 
-**Event loop **
+## Event loop
 
 一般会问浏览器和nodejs里的event loop分别是啥。
 
