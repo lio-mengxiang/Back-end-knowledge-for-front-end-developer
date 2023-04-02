@@ -2,7 +2,8 @@
 
 以下题目是有60%是我以前面试前端真的遇到的面试题。例如，成都的字节，阿里，北京的阿里，腾讯还有一些中小公司。
 
-同步更新到[node.js大前端面试题的github项目中](https://link.juejin.cn/?target=https%3A%2F%2Fgithub.com%2Flio-mengxiang%2Fnode-interview "https://link.juejin.cn/?target=https%3A%2F%2Fgithub.com%2Flio-mengxiang%2Fnode-interview")
+## 如需要简单补一下计算机组成原理，请看我之前的文章
+[【重磅升级！】写给前端非科班的「计算机组成原理」！！！](https://juejin.cn/post/6990652014862532622)
 
 感谢star,是我完善文档的动力
 
