@@ -112,8 +112,25 @@ emitter.emit("myEvent");
 
 使用 emitter 处理问题可以处理比较复杂的状态场景, 比如 TCP 的复杂状态机, 做多项异步操作的时候每一步都可能报错, 这个时候 .emit 错误并且执行某些 .once 的操作可以将你从泥沼中拯救出来.
 
-另外可以注意一下的是, 有些同学喜欢用 emitter 来监控某些类的状态, 但是在这些类释放的时候可能会忘记释放 emitter, 而这些类的内部可能持有该 emitter 的 listener 的引用从而导致内存泄漏.
+两个例子都会死循环，第一个的原因如下：
 
+“myEvent”设置了事件侦听器，当触发时，它将“hi”记录到控制台并再次发出“myEvent”。这将创建“myEvent”触发自身并将“hi”记录到控制台的无限循环。
+
+第二个原因如下：
+
+问题出在选中的代码中，因为"myEvent"的事件监听器被添加在同一事件的回调函数内部。这意味着每次"myEvent"被触发时，都会添加一个新的监听器，导致监听器数量呈指数级增长，从而进入无限循环。
+```
+const EventEmitter = require("events");
+
+let emitter = new EventEmitter();
+
+emitter.once("myEvent", function sth() {
+  emitter.on("myEvent", sth);
+  console.log("hi");
+});
+
+emitter.emit("myEvent");
+```
 ## 阻塞/异步
 
 这个出两个题进入下一小节吧：
