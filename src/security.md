@@ -195,7 +195,50 @@ SELECT * FROM users WHERE usernae = 'myName' AND password = ''; DROP TABLE users
 
 防止的手段目前普遍都采用参数化查询。比如mysql，是本身就有的功能。
 
-在使用参数化查询的情况下，数据库服务器不会将参数的内容视为SQL指令的一部份来处理，而是在数据库完成SQL指令的编译后，才套用参数运行，因此就算参数中含有指令，也不会被数据库运行
+在使用参数化查询的情况下，数据库服务器不会将参数的内容视为SQL指令的一部份来处理，而是在数据库完成SQL指令的编译后，才套用参数运行，因此就算参数中含有指令，也不会被数据库运行。
+
+我们来实际举一个例子：
+
+假设我们有一个简单的登录表单，其中包含用户名和密码字段，并且我们需要在数据库中验证用户是否存在。我们可以使用以下查询语句来验证用户：
+
+sql
+Copy code
+SELECT * FROM users WHERE username = '$username' AND password = '$password'
+其中，$username和$password是从表单输入中获得的变量。这个查询语句将用户输入的用户名和密码作为字符串直接插入到查询语句中，这种方式容易受到SQL注入攻击的影响。
+
+现在假设攻击者在用户名输入框中输入了一个恶意的值，如下所示：
+
+```
+' OR 1=1--
+```
+在这种情况下，查询语句将变成：
+
+```sql
+SELECT * FROM users WHERE username = '' OR 1=1--' AND password = '$password'
+```
+这个查询语句将返回所有用户记录，因为它使用了OR 1=1语句，这个条件将始终为真。攻击者现在可以通过尝试各种密码来登录任何用户账户。
+
+为了避免这种情况，我们可以使用参数化查询，通过占位符将输入数据与查询语句分离，例如：
+
+```sql
+SELECT * FROM users WHERE username = ? AND password = ?
+```
+然后，在查询执行之前，我们将输入数据传递给数据库引擎，例如：
+
+```sql
+$username = 'john';
+$password = 'password123';
+# 创建查询语句
+const ss = ("SELECT * FROM users WHERE username = ? AND password = ?");
+# 绑定查询参数
+bind_param(ss, $username, $password);
+# 执行查询
+execute();
+```
+
+
+在这种情况下，如果攻击者输入了一个恶意的值，例如 ' OR 1=1--，那么它仍然会被视为一个普通的字符串值，并作为参数传递给查询语句，而不会被视为SQL代码。这样，即使攻击者使用了SQL注入攻击，也不会对数据库造成任何伤害。
+
 
 
 
