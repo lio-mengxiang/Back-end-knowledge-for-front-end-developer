@@ -209,7 +209,67 @@ pipe(ws){
 }
 ```
 
+
 ### 双向流（Duplex Stream）
+
+Duplex 是可读可写，同时实现 _read 和 _write 就可以了
+```
+const Stream = require('stream');
+
+var duplexStream = Stream.Duplex();
+
+duplexStream._read = function () {
+    this.push('写入数据.');
+    this.push(null);
+}
+
+duplexStream._write = function (data, enc, next) {
+    next();
+}
+
+duplexStream.on('data', data => console.log(data.toString()));
+duplexStream.on('end', data => console.log('read done~'));
+
+duplexStream.write('写入数据，');
+
+duplexStream.end();
+
+duplexStream.on('finish', data => console.log('write done~'));
+```
+
+整合了 Readable 流和 Writable 流的功能，这就是双工流 Duplex。
+
+### Transform
+Duplex 流虽然可读可写，但是两者之间没啥关联，而有的时候需要对流入的内容做转换之后流出，这时候就需要转换流 Transform。
+
+```
+const Stream = require('stream');
+
+class TransformReverse extends Stream.Transform {
+
+  constructor() {
+    super()
+  }
+
+  _transform(buf, enc, next) {
+    const res = buf.toString().split('').reverse().join('');
+    this.push(res)
+    next()
+  }
+}
+
+var transformStream = new TransformReverse();
+
+transformStream.on('data', data => console.log(data.toString()))
+transformStream.on('end', data => console.log('read done~'));
+
+transformStream.write('反转数据');
+
+transformStream.end()
+
+transformStream.on('finish', data => console.log('write done~'));
+```
+
 ## Process
 
 关于进程，一个非常高频的面试题莫过于，请回答进程、线程和协程的区别！
