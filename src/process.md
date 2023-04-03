@@ -451,11 +451,107 @@ Node.js 的 `child_process.fork()` 在 Unix 上的实现最终调用了 POSIX [f
 - 进程间通信，spwan 和 fork 的进程间通信有啥区别
 - 参数 stdio 是什么
 
+
+## Node的进程
+
+### process 模块
+
+Node.js 中的进程 Process 是一个全局对象，无需 require 直接使用，给我们提供了当前进程中的相关信息。
+
+- process.env：环境变量，例如通过  process.env.NODE_ENV 获取不同环境项目配置信息
+- process.nextTick：这个在谈及 Event Loop 时经常为会提到
+- process.pid：获取当前进程id
+- process.ppid：当前进程对应的父进程
+- process.cwd()：获取当前进程工作目录，
+- process.platform：获取当前进程运行的操作系统平台
+- process.uptime()：当前进程已运行时间，例如：pm2 守护进程的 uptime 值
+- 进程事件：process.on(‘uncaughtException’, cb) 捕获异常信息、process.on(‘exit’, cb）进程推出监听
+- 三个标准流：process.stdout 标准输出、process.stdin 标准输入、process.stderr 标准错误输出
+- process.title 指定进程名称，有的时候需要给进程指定一个名称
+
+以上仅列举了部分常用到功能点，除了 Process 之外 Node.js 还提供了 child_process 模块用来对子进程进行操作，在下文 Nodejs进程创建会继续讲述。
+### Node.js 进程创建
+
+
+child_process 是 Node.js 的内置模块，用来fork进程。
+
+
+几个常用函数：
+四种方式
+
+- child_process.spawn()：适用于返回大量数据，例如图像处理，二进制数据处理。
+- child_process.exec()：适用于小量数据，maxBuffer 默认值为 200 * 1024 超出这个默认值将会导致程序崩溃，数据量过大可采用 spawn。
+- child_process.execFile()：类似 child_process.exec()，区别是不能通过 shell 来执行，不支持像 I/O 重定向和文件查找这样的行为
+- child_process.fork()： 衍生新的进程，进程之间是相互独立的，每个进程都有自己的 V8 实例、内存，系统资源是有限的，不建议衍生太多的子进程出来，通长根据系统** CPU 核心数**设置。
+
+
+CPU 核心数这里特别说明下，fork 确实可以开启多个进程，但是并不建议衍生出来太多的进程，cpu核心数的获取方式const cpus = require('os').cpus();,这里 cpus 返回一个对象数组，包含所安装的每个 CPU/内核的信息，二者总和的数组哦。假设主机装有两个cpu，每个cpu有4个核，那么总核数就是8。
+
+fork开启子进程 Demo
+fork开启子进程解决文章起初的计算耗时造成线程阻塞。
+在进行 compute 计算时创建子进程，子进程计算完成通过 send 方法将结果发送给主进程，主进程通过 message 监听到信息后处理并退出。
+
+fork_app.js
+```
+const http = require('http');
+const fork = require('child_process').fork;
+
+const server = http.createServer((req, res) => {
+    if(req.url == '/compute'){
+        const compute = fork('./fork_compute.js');
+        compute.send('开启一个新的子进程');
+
+        // 当一个子进程使用 process.send() 发送消息时会触发 'message' 事件
+        compute.on('message', sum => {
+            res.end(`Sum is ${sum}`);
+            compute.kill();
+        });
+
+        // 子进程监听到一些错误消息退出
+        compute.on('close', (code, signal) => {
+            console.log(`收到close事件，子进程收到信号 ${signal} 而终止，退出码 ${code}`);
+            compute.kill();
+        })
+    }else{
+        res.end(`ok`);
+    }
+});
+server.listen(3000, 127.0.0.1, () => {
+    console.log(`server started at http://${127.0.0.1}:${3000}`);
+});
+```
+fork_compute.js
+
+针对文初需要进行计算的的例子我们创建子进程拆分出来单独进行运算。
+```
+const computation = () => {
+    let sum = 0;
+    console.info('计算开始');
+    console.time('计算耗时');
+
+    for (let i = 0; i < 1e10; i++) {
+        sum += i
+    };
+
+    console.info('计算结束');
+    console.timeEnd('计算耗时');
+    return sum;
+};
+
+process.on('message', msg => {
+    console.log(msg, 'process.pid', process.pid); // 子进程id
+    const sum = computation();
+
+    // 如果Node.js进程是通过进程间通信产生的，那么，process.send()方法可以用来给父进程发送消息
+    process.send(sum);
+})
+```
+
 ## child.kill 与 child.send
 
 常见会问的面试题, 如 `child.kill` 与 `child.send` 的区别. 二者一个是基于信号系统, 一个是基于 IPC.
 
-> <a name="q-child"></a> 父进程或子进程的死亡是否会影响对方? 什么是孤儿进程?
+## 父进程或子进程的死亡是否会影响对方? 什么是孤儿进程?
 
 子进程死亡不会影响父进程, 不过子进程死亡时（线程组的最后一个线程，通常是“领头”线程死亡时），会向它的父进程发送死亡信号. 反之父进程死亡, 一般情况下子进程也会随之死亡, 但如果此时子进程处于可运行态、僵死状态等等的话, 子进程将被`进程1`（init 进程）收养，从而成为孤儿进程. 另外, 子进程死亡的时候（处于“终止状态”），父进程没有及时调用 `wait()` 或 `waitpid()` 来返回死亡进程的相关信息，此时子进程还有一个 `PCB` 残留在进程表中，被称作僵尸进程.
 
@@ -537,45 +633,16 @@ Node.js 中的 IPC 通信是由 libuv 通过管道技术实现的, 在 windows �
 
 最后于进程间通信 (IPC) 的问题, 一般不会直接问 IPC 的实现, 而是会问什么情况下需要 IPC, 以及使用 IPC 处理过什么业务场景等.
 
-## 守护进程
+### Cluster (集群)
+### 守护进程
 
-最后的守护进程, 是服务端方面一个很基础的概念了. 很多人可能只知道通过 pm2 之类的工具可以将进程以守护进程的方式启动, 却不了解什么是守护进程, 为什么要用守护进程. 对于水平好的同学, 我们是希望能了解守护进程的实现的.
+这两部分原本的内容已经过时，因为k8s的出现，完全不需要node的cluster模块起集群了,守护进程也是用k8s来做更合理，k8s可以轻松的实现负载均衡，扩缩容，滚动升级等等功能，k8s本身也是常驻进程。
 
-普通的进程, 在用户退出终端之后就会直接关闭. 通过 `&` 启动到后台的进程, 之后会由于会话（session 组）被回收而终止进程. 守护进程是不依赖终端（tty）的进程, 不会因为用户退出终端而停止运行的进程.
+这里就补一些node集群的知识当做了解吧。
 
-```c
-// 守护进程实现 (C语言版本)
-void init_daemon()
-{
-    pid_t pid;
-    int i = 0;
 
-    if ((pid = fork()) == -1) {
-        printf("Fork error !\n");
-        exit(1);
-    }
 
-    if (pid != 0) {
-        exit(0);        // 父进程退出
-    }
 
-    setsid();           // 子进程开启新会话, 并成为会话首进程和组长进程
-    if ((pid = fork()) == -1) {
-        printf("Fork error !\n");
-        exit(-1);
-    }
-    if (pid != 0) {
-        exit(0);        // 结束第一子进程, 第二子进程不再是会话首进程
-                        // 避免当前会话组重新与tty连接
-    }
-    chdir("/tmp");      // 改变工作目录
-    umask(0);           // 重设文件掩码
-    for (; i < getdtablesize(); ++i) {
-       close(i);        // 关闭打开的文件描述符
-    }
+#### 多进程架构
 
-    return;
-}
-```
 
-[Node.js 编写守护进程](https://cnodejs.org/topic/57adfadf476898b472247eac)
