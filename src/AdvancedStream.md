@@ -66,6 +66,10 @@ pipe(ws){
 
 我看了很多网上的文章，包括源码分析，感觉还是没有解决这个问题，索性就自己调试一下源码了。以下是调试方法和调试记录
 
+分析完这个问题后，自己顺便也搞定了另外两个疑问：
+- 自定义可写流，如果不调用next函数，流会停止吗，源码如何实现导致这样的情况？
+- transform流的实现原理是什么，它内部做了背压处理吗？
+
 ## 调试方法
 
 我用的是chrome浏览器来协助看源码的方式（js代码，如果要看c++的话不太适合）
@@ -419,4 +423,252 @@ pipe函数的处理方式没有大问题，原因是一般情况下，我们的�
 但是第二个案例也告诉我们，如果每次push的数据大小过大，内存会维持一个较大的使用量，不建议这样做，所以如果你要自定义可读流，一定要把每次push的数据限制大小。这样应用的性能会更好！
 
 所以说pipe虽然处理了背压，但使用者自己也要注意可读流的每次的大小。
+
+
+## 自定义可写流，如果不调用next函数，流会停止吗，源码如何实现导致这样的情况？
+
+有的同学可能不清楚自定义可写流如何实现，我们先简单了解下：
+
+```javasscript
+const Stream = require('stream');
+
+const writableStream = Stream.Writable();
+
+writableStream._write = function (data, encoding, next) {
+   setInterval(() => {
+       next();
+   }, 1000);
+}
+
+writableStream.on('finish', () => console.log('done~'));
+
+writableStream.write('写入数据，');
+
+writableStream.end();
+```
+如上，只要write方法会调用_write，_write接收写入的数据。
+
+
+![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/e6c269319fa84e2cbdab64822c42948e~tplv-k3u1fbpfcp-watermark.image?)
+
+我们打断点进入到write方法中,案例就上面的`ritableStream.write('写入数据，');`。
+
+```
+Writable.prototype.write = function(chunk, encoding, cb) {
+  return _write(this, chunk, encoding, cb) === true;
+};
+```
+此时只有chunk是有数据，encoding为undefined（会帮我们默认设为utf8，highwatermark会置为16384，cb为空）
+
+我们看一下_write函数，主要就是初始化writeable的state，比如encoding, 然后调用了
+```
+return writeOrBuffer(stream, state, chunk, encoding, cb);
+```
+这里的stream就是writeable实例对象，writeOrBuffer源码如下：
+```
+function writeOrBuffer(stream, state, chunk, encoding, callback) {
+ // 我们这里的数据length是15
+  const len = state.objectMode ? 1 : chunk.length;
+ // 写缓存大小加上15
+  state.length += len;
+
+
+  // 此时因为highWaterMark是16384，所以ret是true,而且一般情况下都是true
+  const ret = state.length < state.highWaterMark;
+  // We must ensure that previous needDrain will not be reset to false.
+  if (!ret)
+    state.needDrain = true;
+
+    // 把当前状态writing设为true
+    // stream._write就是我们外部写的_write函数
+    state.writelen = len;
+    state.writecb = callback;
+    state.writing = true;
+    state.sync = true;
+    stream._write(chunk, encoding, state.onwrite);
+    state.sync = false;
+  
+
+  return ret && !state.errored && !state.destroyed;
+}
+```
+ stream._write就是我们外部写的_write函数，也就是把chunk（15字节），encoding是'buffer'，原因是state.decodeStrings默认是true，所以。
+ 
+ 我们外部调用next函数实际上是state.onwrite函数，我们看下是onwrite源码：
+ 
+```
+state.writing = false;
+  state.writecb = null;
+  state.length -= state.writelen;
+  state.writelen = 0;
+  
+   process.nextTick(afterWriteTick, state.afterWriteTickInfo);
+```
+然后在afterWriteTick执行afterWriteTick方法，这个方法对于我们探讨next函数的调用对可写流产生什么。
+
+所以我们可以看到，产生的数据是直接送给下游的，没有经过缓冲区？这是不是跟我们的图片上展示的流程冲突了呢？
+
+### 什么时候写入缓冲区
+我们把例子改一下：
+
+```
+const Stream = require('stream');
+
+const writableStream = Stream.Writable({ highWaterMark: 3, encoding: 'utf8' });
+
+writableStream._write = function (data, encoding, next) {
+  console.log('data: ', data.toString());
+}
+
+writableStream.on('finish', () => console.log('done~'));
+
+writableStream.write('123456');
+writableStream.write('2123456');
+
+
+writableStream.end();
+```
+
+第一次读入数据123456跟之前没啥区别，区别就在第二次读数据，请看以下关键代码：
+```
+
+  if (state.writing || state.corked || state.errored || !state.constructed) {
+    state.buffered.push({ chunk, encoding, callback });
+    if (state.allBuffers && encoding !== 'buffer') {
+      state.allBuffers = false;
+    }
+    if (state.allNoop && callback !== nop) {
+      state.allNoop = false;
+    }
+  } else {
+    state.writelen = len;
+    state.writecb = callback;
+    state.writing = true;
+    state.sync = true;
+    stream._write(chunk, encoding, state.onwrite);
+    state.sync = false;
+  }
+```
+在读取123456的时候虽然调用stream._write(chunk, encoding, state.onwrite);，但是因为next函数没有，所以state.writing 还是等于true（next函数的调用会让state.writing = false）
+
+这就导致第二次读数据的时候，上面的if语句走的是第一个条件。把数据写到了缓冲区里，但是没有调用stream._write，所以就这么结束了。。。
+
+但是，但是，如果你再改一下案例
+
+```
+const Stream = require('stream');
+
+const writableStream = Stream.Writable({ highWaterMark: 3, encoding: 'utf8' });
+
+writableStream._write = function (data, encoding, next) {
+  console.log('data: ', data.toString());
+  setTimeout(()=>{
+      next();
+  },2000)
+}
+
+writableStream.on('finish', () => console.log('done~'));
+
+writableStream.write('123456');
+writableStream.write('2123456');
+
+
+writableStream.end();
+```
+在两秒后，又会输出2123456，这是因为2秒后调用next函数，此时会把缓冲区里的数据取出来。
+
+
+此时的逻辑就变为，一边把数据存入缓冲区，一边把之前已经在缓冲区的数据拿出来给下游！
+
+接着看transform流
+
+
+## transform源码
+
+
+下图是transform流的数据走向：
+![image.png](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/32fd35f46f0a4f85a4a670a64bbc5e26~tplv-k3u1fbpfcp-watermark.image?)
+
+我们以下面的代码打断点调试：
+
+```
+const Stream = require('stream');
+
+class TransformReverse extends Stream.Transform {
+
+  constructor() {
+    super()
+  }
+
+  _transform(buf, encoding, next) {
+    const res = buf.toString().split('').reverse().join('');
+    this.push(res)
+    next()
+  }
+}
+
+var transformStream = new TransformReverse();
+
+transformStream.on('data', data => console.log(data.toString()))
+transformStream.on('end', data => console.log('read done~'));
+
+transformStream.write('写数据了！');
+
+transformStream.end()
+
+transformStream.on('finish', data => console.log('write done~'));
+
+```
+
+下面的_write，其实就是可写流里自定义的write方法，所以Transform流自己内部实现了自定义可写流。
+
+
+```javascript
+Transform.prototype._write = function(chunk, encoding, callback) {
+  const rState = this._readableState;
+  const wState = this._writableState;
+  const length = rState.length;
+
+  this._transform(chunk, encoding, (err, val) => {
+    if (err) {
+      callback(err);
+      return;
+    }
+
+    if (val != null) {
+      this.push(val);
+    }
+
+    if (
+      wState.ended || // Backwards compat.
+      length === rState.length || // Backwards compat.
+      rState.length < rState.highWaterMark
+    ) {
+      callback();
+    } else {
+      this[kCallback] = callback;
+    }
+  });
+};
+
+Transform.prototype._read = function() {
+  if (this[kCallback]) {
+    const callback = this[kCallback];
+    this[kCallback] = null;
+    callback();
+  }
+};
+```
+然后上面调用了this._transform，就是我们之前案例里的我们自己实现的_transform方法，this.push其实就是可写流之前的push方法，就是往读缓冲区写数据。next函数就是上面_write方法最后一个回调函数。
+
+也即是调用了callback();这个函数的意思是可写流马上把数据返回给下游。
+
+所以transform流没有什么神奇之处，简单来说，首先调用write方法，这个是transform流继承可写流的方法，然后write方法调用内部的writeOrBuffer方法（就跟之前自定义write流是一样的流程）
+
+然后writeOrBuffer方法中调用了自定义的_write方法，这个方法因为被transform流重写了，所以执行的transform流上的_write方法
+
+这个方法里直接调用了自定义的_tranform流，此时可以对流里的数据进行处理，最后处理的数据交给了this.push，也就是写入到可写流的缓存里，最后write流执行callback();也就是之前我们提的next函数。
+
+最终让可写流不断的写入新数据给this._transform，然后this._transform又把转换后的数据给可读流，这样循环往复。
+
 
