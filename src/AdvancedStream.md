@@ -29,7 +29,7 @@ this.push(buf);
 
 这个流程可简述为：
 
-[!](./stream1.png)
+![image](./stream1.png)
 
 
 ### read
