@@ -1,72 +1,13 @@
-## 如何通过流取到数据
+## 前言
 
-用Readable创建对象readable后，便得到了一个可读流。
-
-如果实现_read方法，就将流连接到一个底层数据源。比如拿fs.createStream举例，它的_read是打开文件描述符，然后拿着文件描述符去读取磁盘的数据，然后调用this.push方法，将数据返回给下游。源码如下：
-
-```javascript
-// 通过fs.read从磁盘读取的数据赋值给一个buffer，然后建立一个新buffer把数据copy下来
-// 最后this.push把数据返回给上游
-if (this.pos !== undefined) {
-  this.pos += bytesRead;
-}
-
-this.bytesRead += bytesRead;
-
-if (bytesRead !== buf.length) {
-  // Slow path. Shrink to fit.
-  // Copy instead of slice so that we don't retain
-  // large backing buffer for small reads.
-  const dst = Buffer.allocUnsafeSlow(bytesRead);
-  buf.copy(dst, 0, 0, bytesRead);
-  buf = dst;
-}
-
-this.push(buf);
-```
-
-当readable连接了数据源后，下游便可以调用readable.read(n)向流请求数据，同时监听readable的data事件来接收取到的数据。
-
-这个流程可简述为：
-
-![image](./stream1.png)
+讨论问题于前，我们首先要理解可读流的机制：
 
 
-上面我们说的是暂停模式，可以用read(n)去读取数据，实际上，我们使用的是流动模式更多一些，我们用data事件监听，我们接下来看这两者会有什么区别。
+![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/3d0e9a6849524ca58de4885f2523631b~tplv-k3u1fbpfcp-watermark.image?)
 
-### read
-read方法中的逻辑可用下图表示，后面几节将对该图中各环节加以说明。
-
-![image](./stream2.jpeg)
-
-read的本质我们上面已经看到了，实际上就是读磁盘也好，自己直接把数据放到this.push也好，最终的目的都是把数据喂给下游而已。所以read方法的本质就是调用this.push方法
-
-### push的方式
-
-push在源码中会有两种情况，一种是直接把数据给data事件的回调函数，一种是放到缓存里，源码如下：
-
-注意看这个判断条件是分水岭：
-```
-state.flowing && state.length === 0 && !state.sync
-```
+可以看到可读流是通过内部的this.push方法把数据放到缓存池，然后给data事件的回调函数用的。举个例子，我们自定义一个可读流：
 
 ```
-  if (state.flowing && state.length === 0 && !state.sync &&
-    stream.listenerCount('data') > 0) { // 如果处于流动模式，有监听data的订阅者
-      stream.emit('data', chunk);
-  } else { // 否则保存数据到缓冲区中
-    state.length += state.objectMode ? 1 : chunk.length;
-    if (addToFront) {
-      state.buffer.unshift(chunk);
-    } else {
-      state.buffer.push(chunk);
-    }
-  }
-  maybeReadMore(stream, state); // 尝试多读一点数据
-```
-state.length表示是否缓冲区有数据，这里我们顺便讲一下缓冲区是什么，其实就是一块内存区域，用上层用buffer来存储，是一个链表结构，我们简单测试一下：
-
-```javascript
 const { Readable } = require('stream');
 
 const data = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
@@ -74,513 +15,408 @@ const data = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
 const readableStream = new Readable({
   highWaterMark: 3,
   read() {
+    const chunk = data.shift();
+    this.push(chunk)
   },
 });
-let count = 0;
-setInterval(() => {
-  const data = (++count).toString();
-  console.log(`Buffer content: ${JSON.stringify(readableStream._readableState.buffer)}`);
-  const isPushed = readableStream.push(data);
-  console.log(`Data pushed: ${isPushed}`);
-}, 1000);
+
+
+readableStream.on('data',(data)=>{
+  console.log('data: ', data);
+})
+```
+当readableStream注册data事件的时候，流就会源源不断的调用read方法，把数据拿来。
+
+好了，我们接着看pipe方法。
+
+我一直不明白，pipe方法为什么不去限制读取速度，为什么这么说呢，我们从pipe方法的简单实现开始讨论，如下：
 
 ```
-显示如下：
-
-```shell
-Buffer content: {"head":null,"tail":null,"length":0}
-Data pushed: true
-Buffer content: {"head":{"data":{"type":"Buffer","data":[49]},"next":null},"tail":{"data":{"type":"Buffer","data":[49]},"next":null},"length":1}
-Data pushed: true
-Buffer content: {"head":{"data":{"type":"Buffer","data":[49]},"next":{"data":{"type":"Buffer","data":[50]},"next":null}},"tail":{"data":{"type":"Buffer","data":[50]},"next":null},"length":2}
-Data pushed: false
-Buffer content: {"head":{"data":{"type":"Buffer","data":[49]},"next":{"data":{"type":"Buffer","data":[50]},"next":{"data":{"type":"Buffer","data":[51]},"next":null}}},"tail":{"data":{"type":"Buffer","data":[51]},"next":null},"length":3}
-Data pushed: false
+pipe(ws){
+    // pipe的时候就已经开始读数据了，读数据的同时还会写数据
+    // 如果读的太快
+    this.on('data',(chunk)=>{
+        let flag = ws.write(chunk);
+        if(!flag){
+            this.pause();
+        }
+    });
+    ws.on('drain',()=>{
+        this.resume();
+    })
+}
 ```
 
+代码中的 `pipe` 方法会自动将可读流中的数据传递给可写流，并在数据传递过程中自动处理流的状态变化、数据流量控制等问题。
 
-而且，push方法分为同步调用和异步调用两种情况。
+在这个过程中，如果可写流的缓冲区已满，无法写入更多的数据，此时可读流会暂停（`pause()`）读取数据，等待可写流处理完缓冲区中的数据后再继续读取数据；
 
-也就是这一行代码是区分同步和异步的关键:
+而当可写流的缓冲区变为空时，会触发 `drain` 事件，此时可读流会继续读取数据（`resume()`）。
+
+
+同步更新到[node.js大前端面试题的github项目中](https://link.juejin.cn/?target=https%3A%2F%2Fgithub.com%2Flio-mengxiang%2Fnode-interview "https://link.juejin.cn/?target=https%3A%2F%2Fgithub.com%2Flio-mengxiang%2Fnode-interview")
+
+
+## 疑问
+
+看似没有问题，但是我的疑问是，pipe函数只限制了写入的速度，也就是写入ws.write(chunk)，写入到可写流缓存区时，如果缓存区数据过多，就暂停上游可读流。
+
+为什么没有可读流读数据过快，可读流缓存区数据过多，就暂停往可写流缓存区写数据的逻辑呢？
+
+
+我看了很多网上的文章，包括源码分析，感觉还是没有解决这个问题，索性就自己调试一下源码了。以下是调试方法和调试记录
+
+## 调试方法
+
+我用的是chrome浏览器来协助看源码的方式（js代码，如果要看c++的话不太适合）
 ```
-state.flowing && state.length === 0 && !state.sync
+node --inspect-brk index.js
 ```
-我们解释一下这一行代码：
-
-可读流（Readable Stream）的内部实现使用了一个名为state的对象来跟踪流的状态。其中，state.flowing表示当前流是否处于流动状态，state.length表示内部缓存队列中的数据量，state.sync表示上一次this.push()方法是否被同步调用过。
-
-当this.push()方法被异步调用时，会将数据放入内部缓存队列中，同时将state.sync设置为false。当下一次调用this.push()方法时，如果state.flowing为true且state.length为0，表示当前没有待处理的数据，因此可以安全地异步调用this.push()方法来读取缓存队列中的数据，并将state.sync设置为true，以便下一次可以使用同步方式来推入数据。
-
-而当state.sync为true时，表示上一次this.push()方法已经使用了同步方式来推入数据，因此这一次需要使用异步方式来读取缓存队列中的数据。这是因为如果两次连续的this.push()方法都使用同步方式，可能会导致读取操作的阻塞。
-
-Readable事件
-在调用完_read()后，read(n)会试着从缓存中取数据。
-如果_read()是异步调用push方法的，则此时缓存中的数据量不会增多，容易出现数据量不够的现象。
-
-如果read(n)的返回值为null，说明这次未能从缓存中取出所需量的数据。
-此时，消耗方需要等待新的数据到达后再次尝试调用read方法。
-
-在数据到达后，流是通过readable事件来通知消耗方的。
-在此种情况下，push方法如果立即输出数据，接收方直接监听data事件即可，否则数据被添加到缓存中，需要触发readable事件。
-
-消耗方必须监听这个事件，再调用read方法取得数据。
-
-doRead
-流中维护了一个缓存，当缓存中的数据足够多时，调用read()不会引起_read()的调用，即不需要向底层请求数据。
+然后在chrome://inspect/#devices中，能看到一个Remote Target的一个列表，点击inspect即可进入调试页面。
 
 
-用doRead来表示read(n)是否需要向底层取数据，其逻辑为：
+![image.png](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/7a0a0919d25543419216db163c3cf706~tplv-k3u1fbpfcp-watermark.image?)
 
-var doRead = state.needReadableif (state.length === 0 || state.length - n < state.highWaterMark) {
-  doRead = true}if (state.ended || state.reading) {
-  doRead = false}if (doRead) {
-  state.reading = true
-  state.sync = true
+然后进去
+
+
+
+
+点击右上角的调试按钮即可一步一步的看代码了，走到readableStream.on这里，我们进入函数，就可以看到node源码了
+
+![image.png](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/894711524fbe4cc896f9f16c10856a3f~tplv-k3u1fbpfcp-watermark.image?)
+
+readable的js源码如下：
+
+![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/72382da0f24b4624af9d71d44914e0f0~tplv-k3u1fbpfcp-watermark.image?)
+
+
+## 正式调试
+
+我们用的案例如下
+```
+const { Readable } = require('stream');
+
+const data = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
+
+const readableStream = new Readable({
+  highWaterMark: 3,
+  read() {
+    const chunk = data.shift();
+    this.push(chunk)
+  },
+});
+
+
+readableStream.on('data',(data)=>{
+  console.log('data: ', data);
+})
+```
+重点是highWaterMark为3，我们每次往里面放一个字节。后面我们还会举例，如果一次性放5个字节，超过highWaterMark又会怎么样。
+
+首先进入了on方法，注册data事件，一旦注册data事件，就会调用resume方法（开启流动模式）
+```
+// Ensure readable listeners eventually get something.
+Readable.prototype.on = function(ev, fn) {
+  const res = Stream.prototype.on.call(this, ev, fn);
+  const state = this._readableState;
+
+  if (ev === 'data') {
+    // Update readableListening so that resume() may be a no-op
+    // a few lines down. This is needed to support once('readable').
+    state.readableListening = this.listenerCount('readable') > 0;
+
+    // Try start flowing on next tick if stream isn't explicitly paused.
+    if (state.flowing !== false)
+      this.resume();
+  } else if (ev === 'readable') {
+    if (!state.endEmitted && !state.readableListening) {
+      state.readableListening = state.needReadable = true;
+      state.flowing = false;
+      state.emittedReadable = false;
+      debug('on readable', state.length, state.reading);
+      if (state.length) {
+        emitReadable(this);
+      } else if (!state.reading) {
+        process.nextTick(nReadingNextTick, this);
+      }
+    }
+  }
+
+  return res;
+};
+```
+res其实就是继承的Event模块，所以返回的res可以调用on方法来注册data事件
+
+state返回的是Readable，标记的是当前可读流的一些属性，例如初始化时：
+
+- buffer: 这是缓冲区的对象，是一个链表结构，BufferList {head: null, tail: null, length: 0}
+- flowing: null，表示是否是流动状态，因为我们这里只看流动模式，这个变量比较重要
+- highWaterMark: 3，表示缓冲区大小，单位为字节
+- reading: false，是否正在读数据
+- sync: true，是否是同步读取数据
+
+这里可以看到，因为state.flowing !== false，所以直接进入了 this.resume();
+
+我们接着看resume
+
+```
+Readable.prototype.resume = function() {
+  const state = this._readableState;
+  if (!state.flowing) {
+    debug('resume');
+    // We flow only if there is no one listening
+    // for readable, but we still have to call
+    // resume().
+    state.flowing = !state.readableListening;
+    resume(this, state);
+  }
+  state[kPaused] = false;
+  return this;
+};
+```
+因为state.flowing是null，所以 state.flowing = ture（state.readableListening初始化为false），继续调用resume
+
+
+```
+function resume(stream, state) {
+  if (!state.resumeScheduled) {
+    state.resumeScheduled = true;
+    process.nextTick(resume_, stream, state);
+  }
+}
+```
+state.resumeScheduled初始化也是false，调用了process.nextTick，在本轮事件循环末尾执行resume_。我们接着等待执行process.nextTick。
+
+```
+function resume_(stream, state) {
+  debug('resume', state.reading);
+  if (!state.reading) {
+    stream.read(0);
+  }
+
+  state.resumeScheduled = false;
+  stream.emit('resume');
+  flow(stream);
+  if (state.flowing && !state.reading)
+    stream.read(0);
+}
+```
+因为state.reading初始化是false，所以走到 stream.read(0);我们接着看read方法
+
+```
+Readable.prototype.read = function(n) {
+  
+
+  n = howMuchToRead(n, state);
+  let doRead = state.needReadable;
+  
+  if (state.length === 0 || state.length - n < state.highWaterMark) {
+    doRead = true;
+  }
+
+  if (state.ended || state.reading || state.destroyed || state.errored ||
+      !state.constructed) {
+    doRead = false;
+    debug('reading, ended or constructing', doRead);
+  } else if (doRead) {
+    debug('do read');
+    state.reading = true;
+    state.sync = true;
+    // If the length is currently zero, then we *need* a readable event.
+    if (state.length === 0)
+      state.needReadable = true;
+
+    // Call internal read method
+    this._read(state.highWaterMark);
+
+    state.sync = false;
+    // If _read pushed data synchronously, then `reading` will be false,
+    // and we need to re-evaluate how much data we can return to the user.
+    if (!state.reading)
+      n = howMuchToRead(nOrig, state);
+  }
+
+  let ret;
+  if (n > 0)
+    ret = fromList(n, state);
+  else
+    ret = null;
+
+  if (ret === null) {
+    state.needReadable = state.length <= state.highWaterMark;
+    n = 0;
+  } else {
+    state.length -= n;
+    if (state.multiAwaitDrain) {
+      state.awaitDrainWriters.clear();
+    } else {
+      state.awaitDrainWriters = null;
+    }
+  }
+
   if (state.length === 0) {
-    state.needReadable = true
-  }  this._read(state.highWaterMark)
-  state.sync = false}
-复制
-state.reading标志上次从底层取数据的操作是否已完成。
+    // If we have nothing in the buffer, then we want to know
+    // as soon as we *do* get something into the buffer.
+    if (!state.ended)
+      state.needReadable = true;
 
-一旦push方法被调用，就会设置为false，表示此次_read()结束。
-
-state.highWaterMark是给缓存大小设置的一个上限阈值。
-
-如果取走n个数据后，缓存中保有的数据不足这个量，便会从底层取一次数据。
-
-howMuchToRead
-调用read(n)去取n个数据时，m = howMuchToRead(n)是将从缓存中实际获取的数据量。
-
-
-根据以下几种情况赋值，一旦确定则立即返回：
-
-state.length为0，state.ended为true。
-数据源已枯竭，且缓存为空，无数据可取，m为0.
-state.objectMode为true。
-n为0，则m为0；
-否则m为1，将缓存的第一个元素输出。
-n是数字。
-若n <= 0，则m为0；
-若n > state.length，表示缓存中数据量不够。
-此时如果还有数据可读（state.ended为false），则m为0，同时设置state.needReadable，下次执行read()时doRead会为true，将从底层再取数据。
-如果已无数据可读（state.ended为true），则m为state.length，将剩下的数据全部输出。
-若0 < n <= state.length，则缓存中数据够用，m为n。
-其它情况。
-state.flowing为true（流动模式），则m为缓存中第一个元素（Buffer）的长度，实则还是将第一个元素输出；
-否则m为state.length，将缓存读空。
-上面的规则中：
-
-n通常是undefined或0，即不指定读取的字节数。
-read(0)不会有数据输出，但从前面对doRead的分析可以看出，是有可能从底层读取数据的。
-执行read()时，由于流动模式下数据会不断输出，所以每次只输出缓存中第一个元素输出，而非流动模式则会将缓存读空。
-objectMode为true时，m为0或1。此时，一次push()对应一次data事件。
-综上所述：
-
-可读流是获取底层数据的工具，消耗方通过调用read方法向流请求数据，流再从缓存中将数据返回，或以data事件输出。
-
-如果缓存中数据不够，便会调用_read方法去底层取数据。
-
-该方法在拿到底层数据后，调用push方法将数据交由流处理（立即输出或存入缓存）。
-
-可以结合readable事件和read方法来将数据全部消耗，这是暂停模式的消耗方法。
-
-但更常见的是在流动模式下消耗数据，具体见后面的章节。
-
-数据的流式消耗
-
-所谓“流式数据”，是指按时间先后到达的数据序列。
-
-数据的消耗模式
-可以在两种模式下消耗可读流中的数据：暂停模式（paused mode）和流动模式（flowing mode）。
-
-流动模式下，数据会源源不断地生产出来，形成“流动”现象。
-
-监听流的data事件便可进入该模式。
-
-暂停模式下，需要显示地调用read()，触发data事件。
-
-可读流对象readable中有一个维护状态的对象，readable._readableState，这里
-
-简称为state。
-
-其中有一个标记，state.flowing， 可用来判别流的模式。
-
-它有三种可能值：
-
-true。流动模式。
-false。暂停模式。
-null。初始状态。
-调用readable.resume()可使流进入流动模式，state.flowing被设为true。
-
-调用readable.pause()可使流进入暂停模式，state.flowing被设为false。
-
-暂停模式
-在初始状态下，监听data事件，会使流进入流动模式。
-
-但如果在暂停模式下，监听data事件并不会使它进入流动模式。
-
-为了消耗流，需要显示调用read()方法。
-
-const Readable = require('stream').Readable// 底层数据const dataSource = ['a', 'b', 'c']const readable = Readable()
-readable._read = function () {  if (dataSource.length) {    this.push(dataSource.shift())
-  } else {    this.push(null)
+    // If we tried to read() past the EOF, then emit end on the next tick.
+    if (nOrig !== n && state.ended)
+      endReadable(this);
   }
-}// 进入暂停模式readable.pause()
-readable.on('data', data => process.stdout.write('\ndata: ' + data))var data = readable.read()while (data !== null) {
-  process.stdout.write('\nread: ' + data)
-  data = readable.read()
+
+  if (ret !== null) {
+    state.dataEmitted = true;
+    this.emit('data', ret);
+  }
+前
+  return ret;
+};
+
+```
+因为刚开始，我们的缓存区肯定是没有数据的，所以state.length === 0 是true, 首先会走到
+```
+if (state.length === 0 || state.length - n < state.highWaterMark) {
+    doRead = true;
 }
-复制
-执行上面的脚本，输出如下：
+```
+然后走到
+```
+if(doRead) {
+    state.reading = true;
+    state.sync = true;
+    // If the length is currently zero, then we *need* a readable event.
+    if (state.length === 0)
+      state.needReadable = true;
 
-data: a
-read: a
-data: b
-read: b
-data: c
-read: c
-复制
-可见，在暂停模式下，调用一次read方法便读取一次数据。
+    // Call internal read method
+    this._read(state.highWaterMark);
+}
+```
 
-执行read()时，如果缓存中数据不够，会调用_read()去底层取。
+也就是触发我们之前在readableStream上自定义的read方法，
 
-_read方法中可以同步或异步地调用push(data)来将底层数据交给流处理。
+```
+ read() {
+    const chunk = data.shift();
+    this.push(chunk)
+  },
+```
+也就是最终调用了push方法，push方法最终调用了addChunk方法，因为判断条件是：
+```
+if(chunk && chunk.length > 0){
+    addChunk...
+}
+```
+addChunk方法最终在这里判断是否是直接把数据给data事件的回调函数，还是写入到buffer缓冲区里(在初始化的时候，顺便把state.reading改为了false)
 
-在上面的例子中，由于是同步调用push方法，数据会添加到缓存中。
+```
+state.flowing && state.length === 0 && !state.sync &&
+      stream.listenerCount('data') > 0
+```
 
-read方法在执行完_read方法后，便从缓存中取数据，再返回，且以data事件输出。
+因为之前state.sync已经被改为true，也就是同步读取代码，所以上面的表达式为false，如果是false就会把数据放到缓存区，也就是buffer上，如果是true就会把数据直接给data事件的回调函数。
 
-如果改成异步调用push方法，则由于_read()执行完后，数据来不及放入缓存，
-将出现read()返回null的现象。
+然后调用maybeReadMore函数，会一直重复调用stream.read(0)，直到缓冲区的大小大于等于highWaterMark。
 
+但是这个任务是放在process.nextTick中执行的，我们接着看之前resume_函数没有执行完的地方（主要是掉了flow方法，源码如下）
 
-见下面的示例：
-
-const Readable = require('stream').Readable// 底层数据const dataSource = ['a', 'b', 'c']const readable = Readable()
-readable._read = function () {
-  process.nextTick(() => {    if (dataSource.length) {      this.push(dataSource.shift())
-    } else {      this.push(null)
-    }
-  })
+```
+function flow(stream) {
+  const state = stream._readableState;
+  debug('flow', state.flowing);
+  while (state.flowing && stream.read() !== null);
 }
 
-readable.pause()
-readable.on('data', data => process.stdout.write('\ndata: ' + data))while (null !== readable.read()) ;
-复制
-执行上述脚本，可以发现没有任何数据输出。
+```
+会一直调stream.read()，我们看看如此调用read方法有啥用，它会继续调this.push，push又开始调addChunk,此时因为state.length不等于0了，因为之前已经给缓存区push了数据，所以还会继续往缓存区push数据。
 
-此时，需要使用readable事件：
+read(0) ---> read()方法，然后读取howMuchToRead计算的数据量，然后通过emit方法返回给data事件的回调函数。
 
-const Readable = require('stream').Readable// 底层数据const dataSource = ['a', 'b', 'c']const readable = Readable()
-readable._read = function () {
-  process.nextTick(() => {    if (dataSource.length) {      this.push(dataSource.shift())
-    } else {      this.push(null)
-    }
-  })
-}
+因为之前flow函数有个while循环一直调用stream.read()，就会把数据源源不断的给data事件。
 
-readable.pause()
-readable.on('data', data => process.stdout.write('\ndata: ' + data))
 
-readable.on('readable', function () {  while (null !== readable.read()) ;;
+## 结论1
+
+如果push的数据小于highwaterMark则会读一点就马上给data，不存在我说的pipe会把缓存区撑爆的可能。所以pipe方法的处理是没有问题的。
+
+
+## 换一个案例：如果push比highWaterMark大的数据会怎样
+
+我们换一个上来就push比highWaterMark大的数据
+```
+const { Readable } = require('stream');
+
+const readableStream = new Readable({
+  highWaterMark: 3,
+  read() {
+    const chunk = 'abcdefg';
+    this.push(chunk)
+  },
+});
+
+
+readableStream.on('data',(data)=>{
+  console.log('data: ', data);
 })
-复制
-输出：
+```
+最开始肯定是调用read(0)开启流动模式，跟上面是一样的，也会走到flow方法调用read函数，关键就在于此时read函数如何处理。
 
-data: a
-data: b
-data: c
-复制
-当read()返回null时，意味着当前缓存数据不够，而且底层数据还没加进来（异步调用push()）。
+首先，read()方法没有传参
 
-此种情况下state.needReadable会被设置为true。
-
-push方法被调用时，由于是暂停模式，不会立即输出数据，而是将数据放入缓存，并触发一次readable事件。
-
-所以，一旦read被调用，上面的例子中就会形成一个循环：readable事件导致read方法调用，read方法又触发readable事件。
-
-首次监听readable事件时，还会触发一次read(0)的调用，从而引起_read和push方法的调用，从而启动循环。
-
-总之，在暂停模式下需要使用readable事件和read方法来消耗流。
-
-流动模式
-流动模式使用起来更简单一些。
-
-一般创建流后，监听data事件，或者通过pipe方法将数据导向另一个可写流，即可进入流动模式开始消耗数据。
-
-尤其是pipe方法中还提供了back pressure机制，所以使用pipe进入流动模式的情况非常普遍。
-
-本节解释data事件如何能触发流动模式。
-
-先看一下Readable是如何处理data事件的监听的：
-
-Readable.prototype.on = function (ev, fn) {  var res = Stream.prototype.on.call(this, ev, fn)  if (ev === 'data' && false !== this._readableState.flowing) {    this.resume()
-  }  // 处理readable事件的监听
-  // 省略
-
-  return res
-}
-复制
-Stream继承自EventEmitter，且是Readable的父类。
-
-从上面的逻辑可以看出，在将fn加入事件队列后，如果发现处于非暂停模式，则会调用this.resume()，开始流动模式。
-
-resume()方法先将state.flowing设为true，然后会在下一个tick中执行flow，试图将缓存读空：
-
-if (state.flowing) do {  var chunk = stream.read()
-} while (null !== chunk && state.flowing)
-复制
-flow中每次read()都可能触发push()的调用，而push()中又可能触发flow()或read()的调用，这样就形成了数据生生不息的流动。
-
-其关系可简述为：
-
-
-下面再详细看一下push()的两个分支：
-
-if (state.flowing && state.length === 0 && !state.sync) {
-  stream.emit('data', chunk)
-  stream.read(0)
-} else {
-  state.length += state.objectMode ? 1 : chunk.length
-  state.buffer.push(chunk)  if (state.needReadable)
-    emitReadable(stream)
-}
-复制
-称第一个分支为立即输出。
-
-在立即输出的情况下，输出数据后，执行read(0)，进一步引起_read()和push()的调用，从而使数据源源不断地输出。
-
-在非立即输出的情况下，数据先被添加到缓存中。
-
-
-此时有两种情况：
-
-state.length为0。
-这时，在调用_read()前，state.needReadable就会被设为true。
-因此，一定会调用emitReadable()。
-这个方法会在下一个tick中触发readable事件，同时再调用flow()，从而形成流动。
-state.length不为0。
-由于流动模式下，每次都是从缓存中取第一个元素，所以这时read()返回值一定不为null。
-故flow()中的循环还在继续。
-此外，从push()的两个分支可以看出来，如果state.flowing设为false，第一个分支便不会再进去，也就不会再调用read(0)。
-
-
-同时第二个分支中引发flow的调用后，也不会再调用read()，这就完全暂停了底层数据的读取。
-
-事实上，pause方法就是这样使流从流动模式转换到暂停模式的。
-
-背压反馈机制
-
-考虑下面的例子：
-
-const fs = require('fs')
-fs.createReadStream(file).on('data', doSomething)
-复制
-监听data事件后文件中的内容便立即开始源源不断地传给doSomething()。
-
-如果doSomething处理数据较慢，就需要缓存来不及处理的数据data，占用大量内存。
-
-理想的情况是下游消耗一个数据，上游才生产一个新数据，这样整体的内存使用就能保持在一个水平。
-
-Readable提供pipe方法，用来实现这个功能。
-
-pipe
-用pipe方法连接上下游：
-
-const fs = require('fs')
-fs.createReadStream(file).pipe(writable)
-复制
-writable是一个可写流Writable对象，上游调用其write方法将数据写入其中。
-writable内部维护了一个写队列，当这个队列长度达到某个阈值（state.highWaterMark）时，执行write()时返回false，否则返回true。
-
-于是上游可以根据write()的返回值在流动模式和暂停模式间切换：
-
-readable.on('data', function (data) {  if (false === writable.write(data)) {
-    readable.pause()
+```
+ if (n === undefined) {
+    n = NaN;
+  } else if (!NumberIsInteger(n)) {
+    n = NumberParseInt(n, 10);
   }
-})
+   const nOrig = n;
+```
+导致n等于NaN，并赋值给nOrig。
 
-writable.on('drain', function () {
-  readable.resume()
-})
-复制
-上面便是pipe方法的核心逻辑。
+然后调用
 
-当write()返回false时，调用readable.pause()使上游进入暂停模式，不再触发data事件。
+```
+ n = howMuchToRead(n, state);
+```
+计算最新的n的值，howMuchToRead中这样解决：
 
-但是当writable将缓存清空时，会触发一个drain事件，再调用readable.resume()使上游进入流动模式，继续触发data事件。
-
-看一个例子：
-
-const stream = require('stream')var c = 0const readable = stream.Readable({
-  highWaterMark: 2,
-  read: function () {
-    process.nextTick(() => {      var data = c < 6 ? String.fromCharCode(c + 65) : null
-      console.log('push', ++c, data)      this.push(data)
-    })
+```
+if (NumberIsNaN(n)) {
+    // Only flow one buffer at a time.
+    if (state.flowing && state.length)
+      return state.buffer.first().length;
+    return state.length;
   }
-})const writable = stream.Writable({
-  highWaterMark: 2,
-  write: function (chunk, enc, next) {    console.log('write', chunk)
+```
+判断n是NaN的话 return state.buffer.first().length;
+
+因为read(0)的时候，已经把push的数据放到了state.buffer上的链表第一个位置上，所以这时候返回了这个buffer数据的长度，我们传了'abced'，所以这里的长度是5。也就是n会赋值为5。
+
+然后因为
+
+```
+ if (state.length === 0 || state.length - n < state.highWaterMark) {
+    doRead = true;
+    debug('length less than watermark', doRead);
   }
-})
+```
+ state.length - n < state.highWaterMark为true（state.length 在最开read(0)的时候就已经是5了，现在调用read，结果n的值还是5）所以这里为true
+ 
+> 但是也有可能第二次读的数据是1，那么 state.length - n < state.highWaterMark就为false了，这种情况下会直接把这1个数据给data事件，而不用去调_read方法。
+ 
+这样的话也会有问题，比如每次读100MB的数据，虽然没有撑爆内存，但是会一直保持每次push（100MB）的内存使用，所以在push数据的时候，一定不要数据量过大。
+ 
+最后触发data事件，把那5个字符传给data的回调函数。
 
-readable.pipe(writable)
-复制
-输出：
+## 结论
 
-push 1 A
-write <Buffer 41>
-push 2 B
-push 3 C
-push 4 D
-复制
-虽然上游一共有6个数据（ABCDEF）可以生产，但实际只生产了4个（ABCD）。
+pipe函数的处理方式没有大问题，原因是一般情况下，我们的每次push的数据都会小于highwaterMark，所以会出现我们第一个案例的情况
 
-这是因为第一个数据（A）迟迟未能写完（未调用next()），所以后面通过write方法添加进来的数据便被缓存起来。
+就是每次读一次数据，触发一次data事件，直到push数据结束。
 
-下游的缓存队列到达2时，write返回false，上游切换至暂停模式。
-此时下游保存了AB。
+但是第二个案例也告诉我们，如果每次push的数据大小过大，内存会维持一个较大的使用量，不建议这样做，所以如果你要自定义可读流，一定要把每次push的数据限制大小。这样应用的性能会更好！
 
-由于Readable总是缓存state.highWaterMark这么多的数据，所以上游保存了CD。
+所以说pipe虽然处理了背压，但使用者自己也要注意可读流的每次的大小。
 
-从而一共生产出来ABCD四个数据。
-
-下面使用tick-node将Readable的debug信息按tick分组：
-
-⌘ NODE_DEBUG=stream tick-node pipe.js
-STREAM 18930: pipe count=1 opts=undefined
-STREAM 18930: resume
----------- TICK 1 ----------
-STREAM 18930: resume read 0
-STREAM 18930: read 0
-STREAM 18930: need readable false
-STREAM 18930: length less than watermark true
-STREAM 18930: do read
-STREAM 18930: flow true
-STREAM 18930: read undefined
-STREAM 18930: need readable true
-STREAM 18930: length less than watermark true
-STREAM 18930: reading or ended false
----------- TICK 2 ----------
-push 1 A
-STREAM 18930: ondata
-write <Buffer 41>
-STREAM 18930: read 0
-STREAM 18930: need readable true
-STREAM 18930: length less than watermark true
-STREAM 18930: do read
----------- TICK 3 ----------
-push 2 B
-STREAM 18930: ondata
-STREAM 18930: call pause flowing=true
-STREAM 18930: pause
-STREAM 18930: read 0
-STREAM 18930: need readable true
-STREAM 18930: length less than watermark true
-STREAM 18930: do read
----------- TICK 4 ----------
-push 3 C
-STREAM 18930: emitReadable false
-STREAM 18930: emit readable
-STREAM 18930: flow false
----------- TICK 5 ----------
-STREAM 18930: maybeReadMore read 0
-STREAM 18930: read 0
-STREAM 18930: need readable false
-STREAM 18930: length less than watermark true
-STREAM 18930: do read
----------- TICK 6 ----------
-push 4 D
----------- TICK 7 ----------
-复制
-TICK 0: readable.resume()
-TICK 1: readable在流动模式下开始从底层读取数据
-TICK 2: A被输出，同时执行readable.read(0)。
-TICK 3: B被输出，同时执行readable.read(0)。
-writable.write('B')返回false。
-执行readable.pause()切换至暂停模式。
-TICK 4: TICK 3中read(0)引起push('C')的调用，C被加到readable缓存中。
-此时，writable中有A和B，readable中有C。
-这时已在暂停模式，但在readable.push('C')结束前，发现缓存中只有1个数据，小于设定的highWaterMark（2），故准备在下一个tick再读一次数据。
-TICK 5: 调用read(0)从底层取数据。
-TICK 6: push('D')，D被加到readable缓存中。
-此时，writable中有A和B，readable中有C和D。
-readable缓存中有2个数据，等于设定的highWaterMark（2），不再从底层读取数据。
-可以认为，随着下游缓存队列的增加，上游写数据时受到的阻力变大。
-
-这种back pressure大到一定程度时上游便停止写，等到back pressure降低时再继续。
-
-消耗驱动的数据生产
-使用pipe()时，数据的生产和消耗形成了一个闭环。
-
-通过负反馈调节上游的数据生产节奏，事实上形成了一种所谓的拉式流（pull stream）。
-
-用喝饮料来说明拉式流和普通流的区别的话，普通流就像是将杯子里的饮料往嘴里倾倒，动力来源于上游，数据是被推往下游的；拉式流则是用吸管去喝饮料，动力实际来源于下游，数据是被拉去下游的。
-
-所以，使用拉式流时，是“按需生产”。
-
-如果下游停止消耗，上游便会停止生产。
-
-所有缓存的数据量便是两者的阈值和。
-
-当使用Transform作为下游时，尤其需要注意消耗。
-
-const stream = require('stream')var c = 0const readable = stream.Readable({
-  highWaterMark: 2,
-  read: function () {
-    process.nextTick(() => {      var data = c < 26 ? String.fromCharCode(c++ + 97) : null
-      console.log('push', data)      this.push(data)
-    })
-  }
-})const transform = stream.Transform({
-  highWaterMark: 2,
-  transform: function (buf, enc, next) {    console.log('transform', buf)
-    next(null, buf)
-  }
-})
-
-readable.pipe(transform)
-复制
-以上代码执行结果为：
-
-push a
-transform <Buffer 61>
-push b
-transform <Buffer 62>
-push c
-push d
-push e
-push f
-复制
-可见，并没有将26个字母全生产出来。
-
-Transform中有两个缓存：可写端的缓存和可读端的缓存。
-
-调用transform.write()时，如果可读端缓存未满，数据会经过变换后加入到可读端的缓存中。
-
-当可读端缓存到达阈值后，再调用transform.write()则会将写操作缓存到可写端的缓存队列。
-
-当可写端的缓存队列也到达阈值时，transform.write()返回false，上游进入暂停模式，不再继续transform.write()。
-
-所以，上面的transform中实际存储了4个数据，ab在可读端（经过了_transform的处理），cd在可写端（还未经过_transform处理）。
-
-此时，由前面一节的分析可知，readable将缓存ef，之后便不再生产数据。
-
-这三个缓存加起来的长度恰好为6，所以一共就生产了6个数据。
-
-要想将26个数据全生产出来，有两种做法。
-
-第一种是消耗transform中可读端的缓存，以拉动上游的生产：
-
-readable.pipe(transform).pipe(process.stdout)
-复制
-第二种是，不要将数据存入可读端中，这样可读端的缓存便会一直处于数据不足状态，上游便会源源不断地生产数据：
-
-const transform = stream.Transform({
-  highWaterMark: 2,
-  transform: function (buf, enc, next) {
-    next()
-  }
-})
