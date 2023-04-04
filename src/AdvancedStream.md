@@ -1,15 +1,35 @@
-如何通过流取到数据
+## 如何通过流取到数据
+
 用Readable创建对象readable后，便得到了一个可读流。
 
-如果实现_read方法，就将流连接到一个底层数据源。
+如果实现_read方法，就将流连接到一个底层数据源。比如拿fs.createStream举例，它的_read是打开文件描述符，然后拿着文件描述符去读取磁盘的数据，然后调用this.push方法，将数据返回给下游。源码如下：
 
-流通过调用_read向底层请求数据，底层再调用流的push方法将需要的数据传递过来。
+```
+// 通过fs.read从磁盘读取的数据赋值给一个buffer，然后建立一个新buffer把数据copy下来
+// 最后this.push把数据返回给上游
+if (this.pos !== undefined) {
+  this.pos += bytesRead;
+}
+
+this.bytesRead += bytesRead;
+
+if (bytesRead !== buf.length) {
+  // Slow path. Shrink to fit.
+  // Copy instead of slice so that we don't retain
+  // large backing buffer for small reads.
+  const dst = Buffer.allocUnsafeSlow(bytesRead);
+  buf.copy(dst, 0, 0, bytesRead);
+  buf = dst;
+}
+
+this.push(buf);
+```
 
 当readable连接了数据源后，下游便可以调用readable.read(n)向流请求数据，同时监听readable的data事件来接收取到的数据。
 
 这个流程可简述为：
 
-
+[](./stream1.png)
 read
 read方法中的逻辑可用下图表示，后面几节将对该图中各环节加以说明。
 
