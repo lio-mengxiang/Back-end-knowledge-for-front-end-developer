@@ -4,7 +4,7 @@
 
 如果实现_read方法，就将流连接到一个底层数据源。比如拿fs.createStream举例，它的_read是打开文件描述符，然后拿着文件描述符去读取磁盘的数据，然后调用this.push方法，将数据返回给下游。源码如下：
 
-```
+```javascript
 // 通过fs.read从磁盘读取的数据赋值给一个buffer，然后建立一个新buffer把数据copy下来
 // 最后this.push把数据返回给上游
 if (this.pos !== undefined) {
@@ -32,35 +32,88 @@ this.push(buf);
 ![image](./stream1.png)
 
 
+上面我们说的是暂停模式，可以用read(n)去读取数据，实际上，我们使用的是流动模式更多一些，我们用data事件监听，我们接下来看这两者会有什么区别。
+
 ### read
 read方法中的逻辑可用下图表示，后面几节将对该图中各环节加以说明。
 
+![image](./stream2.jpeg)
 
+read的本质我们上面已经看到了，实际上就是读磁盘也好，自己直接把数据放到this.push也好，最终的目的都是把数据喂给下游而已。所以read方法的本质就是调用this.push方法
 
-push方法
-消耗方调用read(n)促使流输出数据，而流通过_read()使底层调用push方法将数据传给流。
+### push的方式
 
-如果流在流动模式下（state.flowing为true）输出数据，数据会自发地通过data事件输出，不需要消耗方反复调用read(n)。
+push在源码中会有两种情况，一种是直接把数据给data事件的回调函数，一种是放到缓存里，源码如下：
 
-如果调用push方法时缓存为空，则当前数据即为下一个需要的数据。
-这个数据可能先添加到缓存中，也可能直接输出。
-执行read方法时，在调用_read后，如果从缓存中取到了数据，就以data事件输出。
-
-所以，如果_read异步调用push时发现缓存为空，则意味着当前数据是下一个需要的数据，且不会被read方法输出，应当在push方法中立即以data事件输出。
-
-因此，上图中“立即输出”的条件是：
-
+注意看这个判断条件是分水岭：
+```
 state.flowing && state.length === 0 && !state.sync
-复制
-end事件
-由于流是分次向底层请求数据的，需要底层显示地告诉流数据是否取完。
-所以，当某次（执行_read()）取数据时，调用了push(null)，就意味着底层数据取完。
-此时，流会设置state.ended。
+```
 
-state.length表示缓存中当前的数据量。
-只有当state.length为0，且state.ended为true，才意味着所有的数据都被消耗了。
-一旦在执行read(n)时检测到这个条件，便会触发end事件。
-当然，这个事件只会触发一次。
+```
+  if (state.flowing && state.length === 0 && !state.sync &&
+    stream.listenerCount('data') > 0) { // 如果处于流动模式，有监听data的订阅者
+      stream.emit('data', chunk);
+  } else { // 否则保存数据到缓冲区中
+    state.length += state.objectMode ? 1 : chunk.length;
+    if (addToFront) {
+      state.buffer.unshift(chunk);
+    } else {
+      state.buffer.push(chunk);
+    }
+  }
+  maybeReadMore(stream, state); // 尝试多读一点数据
+```
+state.length表示是否缓冲区有数据，这里我们顺便讲一下缓冲区是什么，其实就是一块内存区域，用上层用buffer来存储，是一个链表结构，我们简单测试一下：
+
+```javascript
+const { Readable } = require('stream');
+
+const data = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
+
+const readableStream = new Readable({
+  highWaterMark: 3,
+  read() {
+  },
+});
+let count = 0;
+setInterval(() => {
+  const data = (++count).toString();
+  console.log(`Buffer content: ${JSON.stringify(readableStream._readableState.buffer)}`);
+  const isPushed = readableStream.push(data);
+  console.log(`Data pushed: ${isPushed}`);
+}, 1000);
+
+```
+显示如下：
+
+```shell
+Buffer content: {"head":null,"tail":null,"length":0}
+Data pushed: true
+Buffer content: {"head":{"data":{"type":"Buffer","data":[49]},"next":null},"tail":{"data":{"type":"Buffer","data":[49]},"next":null},"length":1}
+Data pushed: true
+Buffer content: {"head":{"data":{"type":"Buffer","data":[49]},"next":{"data":{"type":"Buffer","data":[50]},"next":null}},"tail":{"data":{"type":"Buffer","data":[50]},"next":null},"length":2}
+Data pushed: false
+Buffer content: {"head":{"data":{"type":"Buffer","data":[49]},"next":{"data":{"type":"Buffer","data":[50]},"next":{"data":{"type":"Buffer","data":[51]},"next":null}}},"tail":{"data":{"type":"Buffer","data":[51]},"next":null},"length":3}
+Data pushed: false
+```
+
+
+而且，push方法分为同步调用和异步调用两种情况。
+
+当我们使用同步调用方式时，数据会立即被推入流中，然后_read方法会继续被调用，以便读取更多的数据。而当我们使用异步调用方式时，数据会被放入内部缓存队列中，然后_read方法会暂停，等待下一个读取操作。
+
+也就是这一行代码是区分同步和异步的关键:
+```
+state.flowing && state.length === 0 && !state.sync
+```
+我们解释一下这一行代码：
+
+可读流（Readable Stream）的内部实现使用了一个名为state的对象来跟踪流的状态。其中，state.flowing表示当前流是否处于流动状态，state.length表示内部缓存队列中的数据量，state.sync表示上一次this.push()方法是否被同步调用过。
+
+当this.push()方法被异步调用时，会将数据放入内部缓存队列中，同时将state.sync设置为false。当下一次调用this.push()方法时，如果state.flowing为true且state.length为0，表示当前没有待处理的数据，因此可以安全地异步调用this.push()方法来读取缓存队列中的数据，并将state.sync设置为true，以便下一次可以使用同步方式来推入数据。
+
+而当state.sync为true时，表示上一次this.push()方法已经使用了同步方式来推入数据，因此这一次需要使用异步方式来读取缓存队列中的数据。这是因为如果两次连续的this.push()方法都使用同步方式，可能会导致读取操作的阻塞。
 
 Readable事件
 在调用完_read()后，read(n)会试着从缓存中取数据。
