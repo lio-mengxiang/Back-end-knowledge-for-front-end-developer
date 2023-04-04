@@ -29,8 +29,10 @@ this.push(buf);
 
 这个流程可简述为：
 
-[](./stream1.png)
-read
+[!](./stream1.png)
+
+
+### read
 read方法中的逻辑可用下图表示，后面几节将对该图中各环节加以说明。
 
 
