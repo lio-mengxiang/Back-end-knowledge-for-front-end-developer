@@ -103,140 +103,249 @@ console.log(decoder.end(Buffer.from([0xAC])));  // €
 
 Node.js 封装了标准 POSIX 文件 I/O 操作的集合. 通过 require('fs') 可以加载该模块. 该模块中的所有方法都有异步执行和同步执行两个版本. 你可以通过 fs.open 获得一个文件的文件描述符.
 
-### 编码
+### fs 文件系统模块
+#### 什么是fs文件模块系统?
 
-// TODO
+fs 模块是 Node.js 官方提供的、用来操作文件的模块。它提供了一系列的方法和属性，用来满足用户对文件的操作需求，该模块的所有方法都有同步和异步两种方式。
 
-UTF8, GBK, es6 中对编码的支持, 如何计算一个汉字的长度
+JavaScript 的是没有操作文件的能力，但是 Node 是可以做到的，Node 提供了操作文件系统模块，是 Node 中使用非常重要和高频的模块，是绝对要掌握的一个模块系统。
 
-BOM
+fs 模块中所有的操作都有两种形式可供选择:同步和异步
 
-### stdio
+- 同步文件系统会阻塞程序的执行，也就是除非操作完毕，否则不会向下执行代码
+- 异步文件系统不会阻塞程序的执行，而是在操作完成时，通过回调函数将结果返回,然后可以立即向下执行代码
 
-stdio (standard input output) 标准的输入输出流, 即输入流 (stdin), 输出流 (stdout), 错误流 (stderr) 三者. 在 Node.js 中分别对应 `process.stdin` (Readable), `process.stdout` (Writable) 以及 `process.stderr` (Writable) 三个 stream.
+- 打开文件
 
-输出函数是每个人在学习任何一门编程语言时所需要学到的第一个函数. 例如 C语言的 `printf("hello, world!");` python/ruby 的 `print 'hello, world!'` 以及 JavaScript 中的 `console.log('hello, world!');`
+ - 格式 ： fs.open(path, flags[, mode], callback)
+ - path : 文件的路径
+ - flags : 文件打开的行为。具体值详见下方表格
+ - mode : 设置文件模式(权限)，文件创建默认权限为 0666(可读，可写)
+ - callback : 回调函数，带有两个参数如：callback(err, fd)
 
-以 C语言的伪代码来看的话, 这类输出函数的实现思路如下:
-
-```c
-int printf(FILE *stream, 要打印的内容)
-{
-  // ...
-
-  // 1. 申请一个临时内存空间
-  char *s = malloc(4096);
-
-  // 2. 处理好要打印的的内容, 其值存储在 s 中
-  //      ...
-
-  // 3. 将 s 上的内容写入到 stream 中
-  fwrite(s, stream);
-
-  // 4. 释放临时空间
-  free(s);
-
-  // ...
-}
+打开模式(flags)	说明
 ```
-
-我们需要了解的是第 3 步, 其中的 stream 则是指 stdout (输出流). 实际上在 shell 上运行一个应用程序的时候, shell 做的第一个操作是 fork 当前 shell 的进程 (所以, 如果你通过 ps 去查看你从 shell 上启动的进程, 其父进程 pid 就是当前 shell 的 pid), 在这个过程中也把 shell 的 stdio 继承给了你当前的应用进程, 所以你在当前进程里面将数据写入到 stdout, 也就是写入到了 shell 的 stdout, 即在当前 shell 上显示了.
-
-输入也是同理, 当前进程继承了 shell 的 stdin, 所以当你从 stdin 中读取数据时, 其实就获取到你在 shell 上输入的数据. (PS: shell 可以是 windows 下的 cmd, powershell, 也可以是 linux 下 bash 或者 zsh 等)
-
-当你使用 ssh 在远程服务器上运行一个命令的时候, 在服务器上的命令输出虽然也是写入到服务器上 shell 的 stdout, 但是这个远程的 shell 是从 sshd 服务上 fork 出来的, 其 stdout 是继承自 sshd 的一个 fd, 这个 fd 其实是个 socket, 所以最终其实是写入到了一个 socket 中, 通过这个 socket 传输你本地的计算机上的 shell 的 stdout.
-
-如果你理解了上述情况, 那么你也就能理解为什么守护进程需要关闭 stdio, 如果切到后台的守护进程没有关闭 stdio 的话, 那么你在用 shell 操作的过程中, 屏幕上会莫名其妙的多出来一些输出. 此处对应[守护进程](/sections/zh-cn/process.md#守护进程)的 C 实现中的这一段:
-
-```c
-for (; i < getdtablesize(); ++i) {
-   close(i);  // 关闭打开的 fd
-}
+r	以读取模式打开文件。如果文件不存在抛出异常。
+r+	以读写模式打开文件。如果文件不存在抛出异常。
+rs	以同步的方式读取文件。
+rs+	以同步的方式读取和写入文件。
+w	以写入模式打开文件，如果文件不存在则创建。
+wx	类似 ‘w’，但是如果文件路径存在，则文件写入失败。
+w+	以读写模式打开文件，如果文件不存在则创建。
+wx+	类似 ‘w+’， 但是如果文件路径存在，则文件读写失败。
+a	以追加模式打开文件，如果文件不存在则创建。
+ax	类似 ‘a’， 但是如果文件路径存在，则文件追加失败。
+a+	以读取追加模式打开文件，如果文件不存在则创建。
+ax+	类似 ‘a+’， 但是如果文件路径存在，则文件读取追加失败。
 ```
-
-Linux/unix 的 fd 都被设计为整型数字, 从 0 开始. 你可以尝试运行如下代码查看.
-
-```
-console.log(process.stdin.fd); // 0
-console.log(process.stdout.fd); // 1
-console.log(process.stderr.fd); // 2
-```
-
-在上一节中的 [在 IPC 通道建立之前, 父进程与子进程是怎么通信的? 如果没有通信, 那 IPC 是怎么建立的?](/sections/zh-cn/process.md#q-child) 中使用环境变量传递 fd 的方法, 这么看起来就很直白了, 因为传递 fd 其实是直接传递了一个整型数字.
-
-### 如何同步的获取用户的输入?
-
-如果你理解了上述的内容, 那么放到 Node.js 中来看, 获取用户的输入其实就是读取 Node.js 进程中的输入流 (即 process.stdin 这个 stream) 的数据.
-
-而要同步读取, 则是不用异步的 read 接口, 而是用同步的 readSync 接口去读取 stdin 的数据即可实现. 以下来自万能的 stackoverflow:
-
+示例代码:
 ```javascript
-/*
- * http://stackoverflow.com/questions/3430939/node-js-readsync-from-stdin
- * @mklement0
- */
-var fs = require('fs');
-
-var BUFSIZE = 256;
-var buf = new Buffer(BUFSIZE);
-var bytesRead;
-
-module.exports = function() {
-  var fd = ('win32' === process.platform) ? process.stdin.fd : fs.openSync('/dev/stdin', 'rs');
-  bytesRead = 0;
-
-  try {
-    bytesRead = fs.readSync(fd, buf, 0, BUFSIZE);
-  } catch (e) {
-    if (e.code === 'EAGAIN') { // 'resource temporarily unavailable'
-      // Happens on OS X 10.8.3 (not Windows 7!), if there's no
-      // stdin input - typically when invoking a script without any
-      // input (for interactive stdin input).
-      // If you were to just continue, you'd create a tight loop.
-      console.error('ERROR: interactive stdin input not supported.');
-      process.exit(1);
-    } else if (e.code === 'EOF') {
-      // Happens on Windows 7, but not OS X 10.8.3:
-      // simply signals the end of *piped* stdin input.
-      return '';
-    }
-    throw e; // unexpected exception
-  }
-
-  if (bytesRead === 0) {
-    // No more stdin input available.
-    // OS X 10.8.3: regardless of input method, this is how the end 
-    //   of input is signaled.
-    // Windows 7: this is how the end of input is signaled for
-    //   *interactive* stdin input.
-    return '';
-  }
-  // Process the chunk read.
-
-  var content = buf.toString(null, 0, bytesRead - 1);
-
-  return content;
-};
+const fs = require('fs')
+fs.open('./file/new成绩.txt','r+',function(err,result) {
+    if(err) {
+        return console.log('打开文件失败' + err.message);
+    } 
+    console.log('打开文件成功' + result);
+})
 ```
+
+在这里，首先要导入fs模块，node中导入模块需要使用内置的require()方法，这里的回调函数中，如果文件存在的话err会返回null,在js中null会默认转换为false，如果文件不存在的话，则err会返回一个错误对象，错误对象会转化为true,从而在这里去写一个判断输出逻辑！
+
+- 获取文件信息
+
+ - 语法格式 : fs.stat(path, callback)
+ - path : 文件路径
+ - callback : 回调函数，带有两个参数如：(err, stats), stats 是 fs.Stats 对象。
+
+- stats类中的方法:
+
+  - stats.isFile()	如果是文件返回 true，否则返回 false。
+  - stats.isDirectory()	如果是目录返回 true，否则返回 false。
+示例代码:
+```
+const fs = require('fs')
+fs.stat('./file/new成绩.txt', function (err, stats) {
+    if (err) {
+        return console.error(err);
+    }
+    console.log("读取文件信息成功！");
+    // 检测文件类型
+    console.log("是否为文件(isFile) ? " + stats.isFile());
+    console.log("是否为目录(isDirectory) ? " + stats.isDirectory());    
+ });
+```
+
+
+获取文件信息用的更多的方法是isFile()和isDirectory(),主要是来判断该文件是否属于文件或者是否属于目录!
+
+- 读取文件
+  - 语法格式 : fs.readFile(path[, options], callback)
+
+  - path：文件路径
+
+  - options：配置选项，若是字符串则指定编码格式
+  - encoding：编码格式
+  - flag：打开方式
+  - callback：回调函数
+  - err：错误信息
+  - data：读取的数据，如果未指定编码格式则返回一个 Buffer
+示例代码 :
+```
+const fs = require('fs')
+fs.readFile('./file/11.txt','utf-8',function(err,data) {
+    console.log(err);
+    console.log('--------');
+    console.log(data);
+})
+```
+
+
+- 写入文件
+  - 语法格式 : fs.writeFile(file, data[, options], callback)
+  - file：文件路径
+  - data：写入内容
+  - options：配置选项，包含 encoding, mode, flag；若是字符串则指定编码格式
+  - callback：回调函数
+
+示例代码 :
+```
+const fs = require('fs')
+
+fs.writeFile('./file/2.txt','hello node.js','utf-8',function(err,data) {
+    //如果文件写入成功，则err的值等于null    null可以转化为false
+    //如果写入文件失败，则err是一个错误对象
+    console.log(err);
+    if(err) {
+        return console.log('文件写入失败' + err.message);
+    }
+    console.log('文件写入成功');
+})
+```
+- 路径动态拼接问题
+
+  - 在使用 fs 模块操作文件时，如果提供的操作路径是以./ 或 ../开头的相对路径时，容易出现路径动态拼接错误的问题
+  - 原因：代码在运行的时候，会以执行 node 命令时所处的目录，动态拼接出被操作文件的完整路径
+  - 解决方案：在使用 fs 模块操作文件时，直接提供完整的路径，从而防止路径动态拼接的问题
+
+示例代码　：
+```
+const fs = require('fs')
+fs.readFile(`${__dirname}/file/11.txt`,'utf-8',function(err,data) {
+    if(err) {
+       return console.log('文件读取失败' + err.message);
+    }
+    console.log(__dirname);  //D:\node复盘\01
+    console.log('文件读取成功!' + data);
+})
+```
+
+
+在这里打印了__dirname，我们可以发现，打印出来的路径和我们终端打开文件的绝对路径是一样的，所以这样的话就可以解决我们有时候使用../或./时出现的路径问题了！
+
+- 其他操作
+验证路径是否存在：
+```
+fs.exists(path, callback)
+fs.existsSync(path)
+```
+删除文件：
+```
+fs.unlink(path, callback)
+fs.unlinkSync(path)
+```
+列出文件：
+```
+fs.readdir(path[,options], callback)
+fs.readdirSync(path[, options])
+```
+截断文件：
+```
+fs.truncate(path, len, callback)
+fs.truncateSync(path, len)
+```
+建立目录：
+```
+fs.mkdir(path[, mode], callback)
+fs.mkdirSync(path[, mode])
+```
+删除目录：
+```
+fs.rmdir(path, callback)
+fs.rmdirSync(path)
+```
+重命名文件和目录：
+```
+fs.rename(oldPath, newPath, callback)
+fs.renameSync(oldPath, newPath)
+```
+监视文件更改：
+```
+fs.watchFile(filename[, options], listener)
+```
+关闭文件 ：
+```
+fs.close(fd, callback)
+```
+### 文件监听
+文件监听是非常常用的功能，比如我们修改了文件后webpack重新打包代码或者Node.js服务重启，都用到了文件监听的功能，Node.js提供了两套文件监听的机制。
+
+#### 基于轮询的文件监听机制
+基于轮询机制的文件监听API是watchFile。
+
+基于轮询的监听文件机制本质上是不断轮询文件的元数据，然后和上一次的元数据进行对比，如果有不一致的就认为文件变化了，因为第一次获取元数据时，还没有可以对比的数据，所以不认为是文件变化，这时候开启一个定时器。隔一段时间再去获取文件的元数据，如此反复，直到用户调stop函数停止这个行为。
+
+#### 基于inotify的文件监听机制
+
+我们看到基于轮询的监听其实效率是很低的，因为需要我们不断去轮询文件的元数据，如果文件大部分时间里都没有变化，那就会白白浪费CPU。如果文件改变了会主动通知我们那就好了，这就是基于inotify机制的文件监听。Node.js提供的接口是watch。watch的实现和watchFile的比较类似
+
+### Promise Fs模块
+Node.js V14中，文件模块支持了Promise化的api。我们可以直接使用await进行文件操作。我们看一下使用例子。
+```
+    const { open, readFile } = require('fs').promises;  
+    async function runDemo() {   
+      try {  
+        console.log(await readFile('11111.md', { encoding: 'utf-8' }));  
+      } catch (e){  
+
+      }  
+    }  
+    runDemo(); 
+```
+
 
 ## Readline
 
-`readline` 模块提供了一个用于从 Readble 的 stream (例如 process.stdin) 中一次读取一行的接口. 当然你也可以用来读取文件或者 net, http 的 stream, 比如:
+`readline` 模块提供了一个用于从 Readble 的 stream (例如 process.stdin) 中一次读取一行的接口. 当然你也可以用来读取文件或者 net, http 的 stream, 
 
-```javascript
-const readline = require('readline');
-const fs = require('fs');
+我们了解一下readline的机制：
+- 读取数据：Readline模块从给定的可读流中读取数据，并将数据缓存在内存中，以便进行分行处理。
 
-const rl = readline.createInterface({
-  input: fs.createReadStream('sample.txt')
-});
+- 分行处理：一旦有足够的数据被读取到缓存中，Readline模块将尝试将其按行进行分割。这通常是通过在数据中查找换行符（"\n"）或回车符（"\r"）来实现的。
 
-rl.on('line', (line) => {
-  console.log(`Line from file: ${line}`);
-});
+- 触发事件：每当一行数据被成功读取并分割后，Readline模块将触发一个“line”事件，并将该行数据作为参数传递给该事件的回调函数。这样，应用程序可以在每次读取新数据时立即对其进行处理。
+
+- 处理用户输入：除了读取数据外，Readline模块还提供了一个接口，用于处理用户的命令行输入。这通常是通过监听“line”事件来实现的。一旦用户输入了一行文本并按下回车键，Readline模块将触发“line”事件，并将该行文本作为参数传递给该事件的回调函数。这样，应用程序就可以根据用户的输入执行相应的操作。
+
+
+举一个例子，
+
+### 如何读取用户输入
+有两种方法可以从Readline实例中读取用户输入：使用question()方法和监听line事件。接下来我们将分别介绍这两种方法。
+
+### 使用question()方法
+question()方法是Readline模块提供的一个便捷的方法，可以在命令行中输出一个提示符，并等待用户输入。一旦用户输入了一行文本并按下回车键，该方法将返回一个Promise对象，该对象的值是用户输入的文本。
+
 ```
+const readline = require('readline');
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
 
-实现上, realine 在读取 TTY 的数据时, 是通过 `input.on('keypress', onkeypress)` 时发现用户按下了回车键来判断是新的 line 的, 而读取一般的 stream 时, 则是通过缓存数据然后用正则 .test 来判断是否为 new line 的.
+rl.question('What is your name? ', (name) => {
+    console.log(`Hello, ${name}!`);
+    rl.close();
+});
 
-PS: 打个广告, 如果在编写脚本时, 不习惯这样异步获取输入, 想要同步获取同步的用户输入可以看一看这个 Node.js 版本类 C语言使用的 [scanf](https://github.com/Lellansin/node-scanf/) 模块 (支持 ts).
-
+```
+上述代码使用question()方法输出一个提示符，并等待用户输入姓名。一旦用户输入了姓名并按下回车键，该方法将调用回调函数，并将用户输入的姓名作为参数传递给它。在此示例中，我们将用户输入的姓名作为参数，输出一条欢迎消息，并调用close()方法关闭Readline实例。
