@@ -11,7 +11,7 @@
 后面的篇章需要了解操作系统的一些基本运行原理，才能更好的回答问题，比如进程就是一个典型的例子，以下链接是我之前写的关于操作系统的基础知识：
 https://juejin.cn/post/6844904112803282957
 
-关于流实现原理（源码断点调试，我之前写过一个文章，有兴趣的同学[移步](./AdvancedStream.md)）,看完这篇文章应该一般的面试题基本上够用了。（你熟悉了全流程，它出的题肯定不会逃出这个范围）
+
 
 ## Stream 流
 
@@ -274,6 +274,7 @@ transformStream.on('finish', data => console.log('write done~'));
 
 ## 更深入的流的讨论
 
+[流内部机制](./AdvancedStream.md)
 
 ## Process
 
@@ -283,6 +284,11 @@ transformStream.on('finish', data => console.log('write done~'));
 
 ### 首先为什么需要进程。
 
+简单总结为什么需要进程：
+- 增加并发度
+- 提高cpu利用率
+- 提高计算机系统的稳定性
+
 早期的计算机只支持单道程序（是指所有进程一个一个排队执行，A 进程执行时，CPU、内存、I/O 设备全是 A 进程控制的，等 A 进程执行完了，才换 B 进程，然后对应的资源比如 CPU、内存这些才能换 B 用）。
 
 但是 cpu 是高效率的，而 IO 是低速的，就会出现 cpu 要等待 IO 的情况；从而降低了实际效率。后来就引入多道批处理；而程序在执行的过程中又会因为共享资源而导致程序在执行的过程中相互限制；后来又提出进程这个概念，进程作为资源分配和任务调度的基本单位
@@ -291,7 +297,15 @@ transformStream.on('finish', data => console.log('write done~'));
 
 此时进程主要解决了计算机发展早起不能支持并发的问题。
 
+此外，不同的进程之间可以相互独立，不会相互影响，保证了计算机系统的稳定性。
+
 ### 那么线程为什么不会出现呢？
+
+简单总结为什么需要线程：
+- 增加并发度
+- 提高系统效率（上下文切换开销更小，共享进程资源）
+
+
 
 - 比如你在玩 QQ 的时候，QQ 是一个进程，如果 QQ 的进程里没有多线程并发，那么 QQ 进程就只能同一时间做一件事情（比如 QQ 打字聊天）
 - 但是我们真实的场景是 QQ 聊天的同时，还可以发文件，还可以视频聊天，这说明如果 QQ 没有多线程并发能力，QQ 能够的实用性就大大降低了。所以我们需要线程，也就是需要进程拥有能够并发多个事件的能力。
@@ -299,6 +313,10 @@ transformStream.on('finish', data => console.log('write done~'));
 可以把线程理解为轻量级的进程，线程是一个基本的 CPU 执行单元，这样不仅仅进程可以并发执行，一个进程内的线程也可以并发执行，这样大大提高了系统的并发度。
 
 此时进程的角色变为资源分配的单元。
+
+其次，线程的切换开销比进程小。线程的创建和撤销的开销要比进程小很多，线程间的切换也比进程间的切换更快，这些都可以降低计算机系统的开销，提高系统的效率。
+
+由于同一进程中的线程共享进程的资源，比如内存、文件等，因此线程之间可以更加方便地进行通信和数据共享。同时，线程也需要遵守同步和互斥机制，避免资源竞争和数据不一致等问题。
 
 ### 协程又是啥？
 
@@ -310,9 +328,229 @@ transformStream.on('finish', data => console.log('write done~'));
 
 进程和线程的切换都是操作系统控制的。
 
-协程的切换者是用户(编程者或应用程序),切换时机是用户自己的程序来决定的。协程的切换内容是硬件上下文，切换内存被保存在用自己的变量(用户栈或堆)中。协程的切换过程只有用户态(即没有陷入内核态),因此切换效率高。
+协程的切换者是用户(编程者或应用程序),切换时机是用户自己的程序来决定的。协程的切换过程只有用户态(即没有陷入内核态),因此切换效率高。
 
-### 浏览器、nodejs 的 event loop 以及 process.nextTick
+## Node.js中的进程、线程
+
+### 进程
+
+Node.js 里通过 node app.js 开启一个服务进程，如果要开启多进程就需要使用node中child_process模块的fork方法，就绪，fork 出来的每个进程都拥有自己的堆栈，一个进程无法访问另外一个进程里定义的变量、数据结构，只有建立了 IPC 通信，进程之间才可数据共享。
+
+注意：开启多进程不是为了解决高并发，主要是解决了单进程模式下 Node.js CPU 利用率不足的情况，充分利用多核 CPU 的性能。
+
+例如：
+```javascript
+const http = require('http');
+
+const server = http.createServer();
+server.listen(3000,()=>{
+    console.log('进程id',process.pid)
+})
+```
+
+### process 模块
+
+Node.js 中的进程 Process 是一个全局对象，无需 require 直接使用。
+
+- process.env：环境变量，例如通过  process.env.NODE_ENV 获取不同环境项目配置信息
+- process.nextTick：事件循环本轮快结束的时候触发
+- process.pid：获取当前进程id
+- process.ppid：当前进程对应的父进程
+- process.cwd()：获取当前进程工作目录，
+- process.platform：获取当前进程运行的操作系统平台
+- process.uptime()：当前进程已运行时间
+- 进程事件：process.on(‘uncaughtException’, cb) 捕获异常信息、process.on(‘exit’, cb）进程推出监听
+- 三个标准流：process.stdout 标准输出、process.stdin 标准输入、process.stderr 标准错误输出
+
+### Node.js 进程创建
+
+进程创建有多种方式，本篇文章以child_process模块。
+
+#### child_process模块
+
+
+- child_process.spawn()：适用于返回大量数据，例如图像处理，二进制数据处理。
+- child_process.exec()：适用于小量数据，maxBuffer 默认值为 200 * 1024 超出这个默认值将会导致程序崩溃，数据量过大可采用 spawn。
+- child_process.execFile()：类似 child_process.exec()，区别是不能通过 shell 来执行，不支持像 I/O 重定向和文件查找这样的行为
+- child_process.fork()： 衍生新的进程，进程之间是相互独立的，每个进程都有自己的 V8 实例、内存，系统资源是有限的，不建议衍生太多的子进程出来，通长根据系统** CPU 核心数**设置。
+```
+// fork_app.js
+
+const http = require('http');
+const fork = require('child_process').fork;
+
+const server = http.createServer((req, res) => {
+    if(req.url == '/compute'){
+        const compute = fork('./fork_compute.js');
+        compute.send('开启一个新的子进程');
+
+        // 当一个子进程使用 process.send() 发送消息时会触发 'message' 事件
+        compute.on('message', sum => {
+            res.end(`Sum is ${sum}`);
+            compute.kill();
+        });
+
+        // 子进程监听到一些错误消息退出
+        compute.on('close', (code, signal) => {
+            compute.kill();
+        })
+    }else{
+        res.end(`ok`);
+    }
+});
+server.listen(3000, 127.0.0.1, () => {
+    console.log(`server started at http://${127.0.0.1}:${3000}`);
+});
+```
+
+```
+// fork_compute.js
+
+针对文初需要进行计算的的例子我们创建子进程拆分出来单独进行运算。
+const computation = () => {
+  // 复杂的计算
+};
+
+process.on('message', msg => {
+    const sum = computation();
+
+    // 如果Node.js进程是通过进程间通信产生的，那么，process.send()方法可以用来给父进程发送消息
+    process.send(sum);
+})
+```
+
+等下我们讲node.js中的线程，就可以用线程去计算CPU密集型任务了，进程的开销实在太大了。
+
+### cluster原理分析
+
+![image](https://user-images.githubusercontent.com/26076975/229998612-4e5a48d7-10ab-40d3-be44-9c9d2a9f4d44.png)
+
+cluster模块调用fork方法来创建子进程，该方法与child_process中的fork是同一个方法。
+
+cluster模块采用的是经典的主从模型，Cluster会创建一个master，然后根据你指定的数量复制出多个子进程，可以使用cluster.isMaster属性判断当前进程是master还是worker(工作进程)。由master进程来管理所有的子进程，主进程不负责具体的任务处理，主要工作是负责调度和管理。
+
+cluster模块使用内置的负载均衡来更好地处理线程之间的压力，该负载均衡使用了Round-robin算法（也被称之为循环算法）。当使用Round-robin调度策略时，master accepts()所有传入的连接请求，然后将相应的TCP请求处理发送给选中的工作进程（该方式仍然通过IPC来进行通信）。
+
+开启多进程时候端口疑问讲解：如果多个Node进程监听同一个端口时会出现 Error:listen EADDRIUNS的错误，而cluster模块为什么可以让多个子进程监听同一个端口呢?原因是master进程内部启动了一个TCP服务器，而真正监听端口的只有这个服务器，当来自前端的请求触发服务器的connection事件后，master会将对应的socket具柄发送给子进程。
+
+### child_process 模块与cluster 模块总结
+
+无论是 child_process 模块还是 cluster 模块，为了解决 Node.js 实例单线程运行，无法利用多核 CPU 的问题而出现的。核心就是父进程（即 master 进程）负责监听端口，接收到新的请求后将其分发给下面的 worker 进程。
+
+cluster模块的一个弊端：
+
+![image](https://user-images.githubusercontent.com/26076975/229999174-fa64a96c-24d2-4b74-8ebd-4fd81a47ec38.png)
+![image](https://user-images.githubusercontent.com/26076975/229999192-c15c4dba-c8a0-4973-ad17-1ede50cb7af9.png)
+
+cluster内部隐时的构建TCP服务器的方式来说对使用者确实简单和透明了很多，但是这种方式无法像使用child_process那样灵活，因为一直主进程只能管理一组相同的工作进程，而自行通过child_process来创建工作进程，一个主进程可以控制多组进程。原因是child_process操作子进程时，可以隐式的创建多个TCP服务器。
+
+#### Node.js进程通信原理
+
+实现进程间通信的技术有很多，如命名管道，匿名管道，socket，信号量，共享内存，消息队列等。Node中实现IPC通道是依赖于libuv。windows下由命名管道(name pipe)实现，*nix系统则采用Unix Domain Socket实现。表现在应用层上的进程间通信只有简单的message事件和send()方法，接口十分简洁和消息化。
+
+IPC创建和实现示意图
+
+![image](https://user-images.githubusercontent.com/26076975/229999570-6ce1d44b-84b5-4462-bb51-e1133190e45b.png)
+## Node.js多进程架构模型
+
+编写主进程
+master.js 主要处理以下逻辑：
+
+- 创建一个 server 并监听 3000 端口。
+- 根据系统 cpus 开启多个子进程
+- 通过子进程对象的 send 方法发送消息到子进程进行通信
+- 在主进程中监听了子进程的变化，如果是自杀信号重新启动一个工作进程。
+- 主进程在监听到退出消息的时候，先退出子进程在退出主进程
+
+```
+// master.js
+const fork = require('child_process').fork;
+const cpus = require('os').cpus();
+
+const server = require('net').createServer();
+server.listen(3000);
+process.title = 'node-master'
+
+const workers = {};
+const createWorker = () => {
+    const worker = fork('worker.js')
+    worker.on('message', function (message) {
+        if (message.act === 'suicide') {
+            createWorker();
+        }
+    })
+    worker.on('exit', function(code, signal) {
+        console.log('worker process exited, code: %s signal: %s', code, signal);
+        delete workers[worker.pid];
+    });
+    worker.send('server', server);
+    workers[worker.pid] = worker;
+    console.log('worker process created, pid: %s ppid: %s', worker.pid, process.pid);
+}
+
+for (let i=0; i<cpus.length; i++) {
+    createWorker();
+}
+
+process.once('SIGINT', close.bind(this, 'SIGINT')); // kill(2) Ctrl-C
+process.once('SIGQUIT', close.bind(this, 'SIGQUIT')); // kill(3) Ctrl-\
+process.once('SIGTERM', close.bind(this, 'SIGTERM')); // kill(15) default
+process.once('exit', close.bind(this));
+
+function close (code) {
+    console.log('进程退出！', code);
+
+    if (code !== 0) {
+        for (let pid in workers) {
+            console.log('master process exited, kill worker pid: ', pid);
+            workers[pid].kill('SIGINT');
+        }
+    }
+
+    process.exit(0);
+}
+```
+#### 工作进程
+
+worker.js 子进程处理逻辑如下：
+
+- 创建一个 server 对象，注意这里最开始并没有监听 3000 端口
+- 通过 message 事件接收主进程 send 方法发送的消息
+- 监听 uncaughtException 事件，捕获未处理的异常，发送自杀信息由主进程重建进程，子进程在链接关闭之后退出
+```
+// worker.js
+const http = require('http');
+const server = http.createServer((req, res) => {
+	res.writeHead(200, {
+		'Content-Type': 'text/plan'
+	});
+	res.end('I am worker, pid: ' + process.pid + ', ppid: ' + process.ppid);
+	throw new Error('worker process exception!'); // 测试异常进程退出、重启
+});
+
+let worker;
+process.title = 'node-worker'
+process.on('message', function (message, sendHandle) {
+	if (message === 'server') {
+		worker = sendHandle;
+		worker.on('connection', function(socket) {
+			server.emit('connection', socket);
+		});
+	}
+});
+
+process.on('uncaughtException', function (err) {
+	console.log(err);
+	process.send({act: 'suicide'});
+	worker.close(function () {
+		process.exit(1);
+	})
+})
+```
+
+
+
+## 浏览器、nodejs 的 event loop 以及 process.nextTick
 
 首先回答这个被问的烂之又烂的浏览器 event loop 执行机制：
 
@@ -432,25 +670,7 @@ process.nextTick()是 node 早期版本无 setImmediate 时的产物，node 作�
 - 定时器和微任务在 NodeV11 版本后的变更
   随着 Node V11 的发布，nextTick 回调和 Promise 微任务将会在各个独立的 setTimeout and setImmediate 之间运行，也就是说一次运行一个宏任务，然后清空微任务队列。
 
-## Child Process
 
-子进程 (Child Process) 是进程中一个重要的概念. 你可以通过 Node.js 的 `child_process` 模块来执行可执行文件, 调用命令行命令, 比如其他语言的程序等. 也可以通过该模块来将 .js 代码以子进程的方式启动. 比较有名的网易的分布式架构 [pomelo](https://github.com/NetEase/pomelo) 就是基于该模块 (而不是 `cluster`) 来实现多进程分布式架构的.
-
-> <a name="q-fork"></a> child_process.fork 与 POSIX 的 fork 有什么区别?
-
-Node.js 的 `child_process.fork()` 在 Unix 上的实现最终调用了 POSIX [fork(2)](http://man7.org/linux/man-pages/man2/fork.2.html), 而 POSIX 的 fork 需要手动管理子进程的资源释放 (waitpid), child_process.fork 则不用关心这个问题, Node.js 会自动释放, 并且可以在 option 中选择父进程死后是否允许子进程存活.
-
-### 面试题
-
-- spawn 、fork、exec、execFile 的区别？
-
-  - 1.spawn 和 fork 都是返回一个基于流的子进程对象
-
-  - 2.exec 和 execFile 可以在回调中拿到返回的 buffer 的内容（执行成功或失败的输出）
-
-  - 3.exec 是创建子 shell 去执行命令，用来直接执行 shell 命令。execFile 是去创建任意你指定的文件的进程，它适合执行文件程序，并拿到执行结果，不适合需要实时去拿数据的情况，比如 spawn
-
-  - 4.fork 是一种特殊的 spawn，可以理解为 spawn 增强版，返回的子进程对象可以和父进程对象进行通信，通过 send 和 on 方法。
 
 - RPC，LPC 中文啥意思？有啥区别吗?
 - 进程间通信，spwan 和 fork 的进程间通信有啥区别
@@ -560,94 +780,12 @@ process.on('message', msg => {
 
 子进程死亡不会影响父进程, 不过子进程死亡时（线程组的最后一个线程，通常是“领头”线程死亡时），会向它的父进程发送死亡信号. 反之父进程死亡, 一般情况下子进程也会随之死亡, 但如果此时子进程处于可运行态、僵死状态等等的话, 子进程将被`进程1`（init 进程）收养，从而成为孤儿进程. 另外, 子进程死亡的时候（处于“终止状态”），父进程没有及时调用 `wait()` 或 `waitpid()` 来返回死亡进程的相关信息，此时子进程还有一个 `PCB` 残留在进程表中，被称作僵尸进程.
 
-## Cluster
 
-Cluster 是常见的 Node.js 利用多核的办法. 它是基于 `child_process.fork()` 实现的, 所以 cluster 产生的进程之间是通过 IPC 来通信的, 并且它也没有拷贝父进程的空间, 而是通过加入 cluster.isMaster 这个标识, 来区分父进程以及子进程, 达到类似 POSIX 的 [fork](http://man7.org/linux/man-pages/man2/fork.2.html) 的效果.
+## 守护进程
 
-```javascript
-const cluster = require("cluster"); // | |
-const http = require("http"); // | |
-const numCPUs = require("os").cpus().length; // | |    都执行了
-// | |
-if (cluster.isMaster) {
-  // |-|-----------------
-  // Fork workers.                             //   |
-  for (var i = 0; i < numCPUs; i++) {
-    //   |
-    cluster.fork(); //   |
-  } //   | 仅父进程执行 (a.js)
-  cluster.on("exit", (worker) => {
-    //   |
-    console.log(`${worker.process.pid} died`); //   |
-  }); //   |
-} else {
-  // |-------------------
-  // Workers can share any TCP connection      // |
-  // In this case it is an HTTP server         // |
-  http
-    .createServer((req, res) => {
-      // |
-      res.writeHead(200); // |   仅子进程执行 (b.js)
-      res.end("hello world\n"); // |
-    })
-    .listen(8000); // |
-} // |-------------------
-// | |
-console.log("hello"); // | |    都执行了
-```
-
-在上述代码中 numCPUs 虽然是全局变量但是, 在父进程中修改它, 子进程中并不会改变, 因为父进程与子进程是完全独立的两个空间. 他们所谓的共有仅仅只是都执行了, 并不是同一份.
-
-你可以把父进程执行的部分当做 `a.js`, 子进程执行的部分当做 `b.js`, 你可以把他们想象成是先执行了 `node a.js` 然后 cluster.fork 了几次, 就执行了几次 `node b.js`. 而 cluster 模块则是二者之间的一个桥梁, 你可以通过 cluster 提供的方法, 让其二者之间进行沟通交流.
-
-### How It Works
-
-worker 进程是由 child_process.fork() 方法创建的, 所以可以通过 IPC 在主进程和子进程之间相互传递服务器句柄.
-
-cluster 模块提供了两种分发连接的方式.
-
-第一种方式 (默认方式, 不适用于 windows), 通过时间片轮转法（round-robin）分发连接. 主进程监听端口, 接收到新连接之后, 通过时间片轮转法来决定将接收到的客户端的 socket 句柄传递给指定的 worker 处理. 至于每个连接由哪个 worker 来处理, 完全由内置的循环算法决定.
-
-第二种方式是由主进程创建 socket 监听端口后, 将 socket 句柄直接分发给相应的 worker, 然后当连接进来时, 就直接由相应的 worker 来接收连接并处理.
-
-使用第二种方式时理论上性能应该较高, 然后时间上存在负载不均衡的问题, 比如通常 70% 的连接仅被 8 个进程中的 2 个处理, 而其他进程比较清闲.
-
-## 进程间通信
-
-IPC (Inter-process communication) 进程间通信技术. 常见的进程间通信技术列表如下:
-
-| 类型               | 无连接 | 可靠 | 流控制 | 优先级 |
-| ------------------ | ------ | ---- | ------ | ------ |
-| 普通 PIPE          | N      | Y    | Y      | N      |
-| 命名 PIPE          | N      | Y    | Y      | N      |
-| 消息队列           | N      | Y    | Y      | N      |
-| 信号量             | N      | Y    | Y      | Y      |
-| 共享存储           | N      | Y    | Y      | Y      |
-| UNIX 流 SOCKET     | N      | Y    | Y      | N      |
-| UNIX 数据包 SOCKET | Y      | Y    | N      | N      |
-
-Node.js 中的 IPC 通信是由 libuv 通过管道技术实现的, 在 windows 下由命名管道（named pipe）实现也就是上表中的最后第二个, \*nix 系统则采用 UDS (Unix Domain Socket) 实现.
-
-普通的 socket 是为网络通讯设计的, 而网络本身是不可靠的, 而为 IPC 设计的 socket 则不然, 因为默认本地的网络环境是可靠的, 所以可以简化大量不必要的 encode/decode 以及计算校验等, 得到效率更高的 UDS 通信.
-
-如果了解 Node.js 的 IPC 的话, 可以问个比较有意思的问题
-
-> <a name="q-ipc-fd"></a> 在 IPC 通道建立之前, 父进程与子进程是怎么通信的? 如果没有通信, 那 IPC 是怎么建立的?
-
-这个问题也挺简单, 只是个思路的问题. 在通过 child_process 建立子进程的时候, 是可以指定子进程的 env (环境变量) 的. 所以 Node.js 在启动子进程的时候, 主进程先建立 IPC 频道, 然后将 IPC 频道的 fd (文件描述符) 通过环境变量 (`NODE_CHANNEL_FD`) 的方式传递给子进程, 然后子进程通过 fd 连上 IPC 与父进程建立连接.
-
-最后于进程间通信 (IPC) 的问题, 一般不会直接问 IPC 的实现, 而是会问什么情况下需要 IPC, 以及使用 IPC 处理过什么业务场景等.
-
-### Cluster (集群)
-### 守护进程
-
-这两部分原本的内容已经过时，因为k8s的出现，完全不需要node的cluster模块起集群了,守护进程也是用k8s来做更合理，k8s可以轻松的实现负载均衡，扩缩容，滚动升级等等功能，k8s本身也是常驻进程。
-
-这里就补一些node集群的知识当做了解吧。
+这一章删掉了，因为现在node的部署不太需要pm2等这些过时的守护进程了，进阶学习k8s的内容吧，k8s功能太强大了，而且因为k8s的存在，也不需要node的cluster模块了，用k8s组件node的集群更靠谱。
 
 
-
-
-#### 多进程架构
-
-
+参考
+- 深入浅出的Node.js
+- [深入理解Node.js中的进程和线程](https://juejin.cn/post/6844903908385488903#heading-3)
