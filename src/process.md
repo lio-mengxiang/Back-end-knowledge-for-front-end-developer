@@ -335,7 +335,7 @@ transformStream.on('finish', data => console.log('write done~'));
 
 ### 进程
 
-Node.js 里通过 node app.js 开启一个服务进程，如果要开启多进程就需要使用node中child_process模块的fork方法，就绪，fork 出来的每个进程都拥有自己的堆栈，一个进程无法访问另外一个进程里定义的变量、数据结构，只有建立了 IPC 通信，进程之间才可数据共享。
+Node.js 里通过 node app.js 开启一个服务进程，如果要开启多进程就需要使用node中child_process模块的fork方法，fork 出来的每个进程都拥有自己的堆栈，一个进程无法访问另外一个进程里定义的变量、数据结构，只有建立了 IPC 通信，进程之间才可数据共享。
 
 注意：开启多进程不是为了解决高并发，主要是解决了单进程模式下 Node.js CPU 利用率不足的情况，充分利用多核 CPU 的性能。
 
