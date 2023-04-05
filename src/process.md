@@ -785,6 +785,35 @@ process.on('message', msg => {
 
 这一章删掉了，因为现在node的部署不太需要pm2等这些过时的守护进程了，进阶学习k8s的内容吧，k8s功能太强大了，而且因为k8s的存在，也不需要node的cluster模块了，用k8s组件node的集群更靠谱。
 
+我们接下来看看如果没有k8s，如何实现守护进程的一些功能。
+
+### 自动重启
+
+有了父进程之间的相关事件之后，就可以在这些关系之间创建出需要的机制。我们可以通过监听子进程的exit事件来获知其退出的信息。所以可以在其退出的时候实现重启。
+
+![image](https://user-images.githubusercontent.com/26076975/230006801-6c6ef853-45d0-4fd7-ba4b-c6df9a77bc26.png)
+
+
+```
+var workers = {};
+var createWorker = function () {
+  var worker = fork(__dirname + '/worker.js');
+  worker.on('exit', function () {
+    console.log('Worker ' + worker.pid + ' exited.'); delete workers[worker.pid];
+    createWorker();
+  });
+  // 句柄转发
+  worker.send('server', server); workers[worker.pid] = worker; console.log('Create worker. pid: ' + worker.pid);
+};
+for (var i = 0; i < cpus.length; i++) {
+  createWorker();
+}
+process.on('exit', function () {
+  for (var pid in workers) {
+    workers[pid].kill();
+  }
+});
+```
 
 参考
 - 深入浅出的Node.js
