@@ -20,6 +20,17 @@ IO密集型指的是系统的CPU性能相对硬盘、内存要好很多，此时
 
 ## Buffer
 
+在 Node.js 中，Buf所以说，Buffer 的本质就是一个继承自 Uint8Array 的子类fer 存在于 buffer 内置模块中。不过现在的 Node.js 也已经直接把 Buffer 挂载在了 globalThis 上,也就是说我们可以全局直接使用Buffer对象，而不需要require引入。
+
+Buffer 的本质就是一个继承自 Uint8Array 的子类。
+
+```javascript
+const a = Buffer.from('123');
+console.log(a instanceof Unit8Array);  // true
+console.log(a.byteOffset);  // 16
+console.log(a.buffer);      // ArrayBuffer { byteLength: 8192, ... }
+```
+
 Buffer 是 Node.js 中用于处理二进制数据的类, 其中与 IO 相关的操作 (网络/文件等) 均基于 Buffer. Buffer 类的实例非常类似整数数组, ***但其大小是固定不变的***, 并且其内存在 V8 堆栈外分配原始内存空间. Buffer 类的实例创建之后, 其所占用的内存大小就不能再进行调整.
 
 在 Node.js v6.x 之后 `new Buffer()` 接口开始被废弃, 理由是参数类型不同会返回不同类型的 Buffer 对象, 所以当开发者没有正确校验参数或没有正确初始化 Buffer 对象的内容时, 以及不了解的情况下初始化  就会在不经意间向代码中引入安全性和可靠性问题.
@@ -29,6 +40,10 @@ Buffer 是 Node.js 中用于处理二进制数据的类, 其中与 IO 相关的�
 Buffer.from()|根据已有数据生成一个 Buffer 对象
 Buffer.alloc()|创建一个初始化后的 Buffer 对象
 Buffer.allocUnsafe()|创建一个未初始化的 Buffer 对象
+
+其实Buffer.alloc的创建就是使用的Unit8Array。
+
+
 
 ### TypedArray
 
