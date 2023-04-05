@@ -1,6 +1,10 @@
+本文讨论了三个问题：
+- 可读流内部机制
+- 可写流内部机制
+- transform流内部机制
 ## 前言
 
-讨论问题于前，我们首先要理解可读流的机制：
+讨论问题前，我们首先要理解可读流的机制：
 
 
 ![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/3d0e9a6849524ca58de4885f2523631b~tplv-k3u1fbpfcp-watermark.image?)
@@ -212,6 +216,7 @@ function resume_(stream, state) {
 Readable.prototype.read = function(n) {
   
 
+ const nOrig = n;
   n = howMuchToRead(n, state);
   let doRead = state.needReadable;
   
@@ -299,7 +304,7 @@ if(doRead) {
 }
 ```
 
-也就是触发我们之前在readableStream上自定义的read方法，
+也就是触发我们之前在readableStream上自定义的read方法，(his._read(state.highWaterMark))
 
 ```
  read() {
@@ -322,9 +327,10 @@ state.flowing && state.length === 0 && !state.sync &&
 
 因为之前state.sync已经被改为true，也就是同步读取代码，所以上面的表达式为false，如果是false就会把数据放到缓存区，也就是buffer上，如果是true就会把数据直接给data事件的回调函数。
 
-然后调用maybeReadMore函数，会一直重复调用stream.read(0)，直到缓冲区的大小大于等于highWaterMark。
 
-但是这个任务是放在process.nextTick中执行的，我们接着看之前resume_函数没有执行完的地方（主要是掉了flow方法，源码如下）
+> 然后调用maybeReadMore函数，会一直重复调用stream.read(0)，直到缓冲区的大小大于等于highWaterMark。这个maybeReadMore我们不用太在意，它只不过是想继续调用_read方法来读取数据而已。这个任务是放在process.nextTick中执行的
+
+我们接着看之前resume_函数没有执行完的地方（主要是掉了flow方法，源码如下）
 
 ```
 function flow(stream) {
@@ -338,7 +344,50 @@ function flow(stream) {
 
 read(0) ---> read()方法，然后读取howMuchToRead计算的数据量，然后通过emit方法返回给data事件的回调函数。
 
-因为之前flow函数有个while循环一直调用stream.read()，就会把数据源源不断的给data事件。
+我们上面已经写了read方法，read方法在调用this._read后的逻辑是什么，是关键，因为我们知道了this._read是往缓存push数据对吧。以下源码我删去了不重要的部分，重点看 `this._read(state.highWaterMark);`后面的代码
+
+```
+Readable.prototype.read = function(n) {
+  
+  const nOrig = n;
+  n = howMuchToRead(n, state);
+  let doRead = state.needReadable;
+  
+  if (state.length === 0 || state.length - n < state.highWaterMark) {
+    doRead = true;
+  }
+  
+  if(doRead) {
+  
+    state.reading = true;
+    state.sync = true;
+
+    this._read(state.highWaterMark);
+    state.sync = false;
+    if (!state.reading)
+      n = howMuchToRead(nOrig, state);
+  }
+
+  let ret;
+  if (n > 0)
+    ret = fromList(n, state);
+  else
+    ret = null;
+    state.length -= n;
+
+  if (ret !== null) {
+    state.dataEmitted = true;
+    this.emit('data', ret);
+  }
+
+  return ret;
+};
+
+```
+` this._read(state.highWaterMark);`后面的代码主要计算了要读取的数据量n,fromList就是去缓存里拿数据，只要有数据就返回给ret，ret的值不为null，就触发 this.emit('data', ret);我数据给data事件的回调。
+
+
+因为之前flow函数有个while循环一直调用stream.read()，read方法的循环就是写数据到缓存，然后把数据源源的给data事件。这样循环往复，直到this.push的数据全部消耗完
 
 
 ## 结论1
@@ -435,9 +484,7 @@ const Stream = require('stream');
 const writableStream = Stream.Writable();
 
 writableStream._write = function (data, encoding, next) {
-   setInterval(() => {
        next();
-   }, 1000);
 }
 
 writableStream.on('finish', () => console.log('done~'));
@@ -492,9 +539,9 @@ function writeOrBuffer(stream, state, chunk, encoding, callback) {
   return ret && !state.errored && !state.destroyed;
 }
 ```
- stream._write就是我们外部写的_write函数，也就是把chunk（15字节），encoding是'buffer'，原因是state.decodeStrings默认是true，所以。
+ stream._write就是我们外部写的_write函数，也就是把chunk（15字节），传给了_write。
  
- 我们外部调用next函数实际上是state.onwrite函数，我们看下是onwrite源码：
+ 我们外部调用next函数实际上是调用了可写流内部封装的state.onwrite函数，我们看下是onwrite源码：
  
 ```
 state.writing = false;
@@ -506,7 +553,15 @@ state.writing = false;
 ```
 然后在afterWriteTick执行afterWriteTick方法，这个方法对于我们探讨next函数的调用对可写流产生什么。
 
-所以我们可以看到，产生的数据是直接送给下游的，没有经过缓冲区？这是不是跟我们的图片上展示的流程冲突了呢？
+### 结论
+
+至少我们可以得出结论，next方法直接调用，而不是
+```
+setTimeout(()=>{
+    next()
+})
+```
+这样调用的情况下，产生的数据是直接送给下游的，没有经过缓冲区的，但这是不是跟我们的图片上展示的流程冲突了呢？其实不是的，后面会讨论到，如果是上面类似next被异步包裹的情况下，因为不能及时消费数据，数据是要放到缓存区里的。
 
 ### 什么时候写入缓冲区
 我们把例子改一下：
