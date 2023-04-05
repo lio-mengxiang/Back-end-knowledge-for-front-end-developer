@@ -132,6 +132,7 @@ https://juejin.cn/post/6844904112803282957
 * [Stream](/src/process.md)
   - 可读流默认是什么状态？
   - 背压是什么？知道pipeline吗？跟pipe有什么区别
+  - [流内部机制](/src/AdvancedStream.md)
 * [Process (进程)](/src/process.md)
   - 请回答进程、线程和协程的区别
   - RPC，LPC 中文啥意思？有啥区别吗
