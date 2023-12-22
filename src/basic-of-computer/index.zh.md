@@ -14,4 +14,4 @@
 ## 计算机网络基础知识 + 面试真题
 
 - [基础知识](./computer-network.zh.md)
-- [面试题](./principles-of-computer-composition-interview.zh.md)
+- [面试题](./computer-network.interview.zh.md)
