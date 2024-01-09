@@ -1,4 +1,4 @@
-【前端的后端知识体系】- 操作系统 - 面试题篇
+# 【前端的后端知识体系】- 操作系统 - 面试题篇
 
 hello，我是孟祥同学，本文尽量避免枯燥的说教，力图通过前端日常工作 + js写的代码，引出学习操作系统的知识的面试题。最终希望大家都可以在自己的简历上加上一条技能，既 熟悉并理解操作系统的基本概念，并能用于理解一些常见的前端操作。
 
@@ -40,13 +40,24 @@ hello，我是孟祥同学，本文尽量避免枯燥的说教，力图通过前
 
 这里有要引申出一个问题，数据块我们一般都是逻辑上的叫法，真实映射到物理磁盘上，我们称之为扇区，什么是扇区呢？
 ## 这里我们不得不来看看磁盘的物理结构了
-![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603927773-a07f4b34-cc9c-442e-b1d4-bc1964054b8b.png#averageHue=%23aba676&clientId=u217a09e0-35c5-4&from=paste&id=ue4e7b871&originHeight=562&originWidth=886&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=ue526834f-b338-4030-adb5-906bf6ad80f&title=)<br />上面的是黑色部分，分别是磁头和磁臂，然后磁头读取盘面上的信息。然后磁盘上会有扇区划分，如下图：<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603927439-62f3cc52-4e5f-4972-b1aa-2d1dab54daff.png#averageHue=%23f6f6f6&clientId=u217a09e0-35c5-4&from=paste&id=u1013ca84&originHeight=796&originWidth=1306&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u2c178bed-37cd-42fa-a034-d18ac4f3bcb&title=)<br />上面可以看到，一个盘面被划分为多个相等的扇区。然后我们可以给扇区编上号，这样当我们要查找某个文件的时候，操作系统会指名这个文件在几号数据块上，数据块又映射到物理上的扇区上，将真正的数据提取到内存中供CPU调度。
+
+![Alt text](./assets/image.png)
+
+<br />上面的是黑色部分，分别是磁头和磁臂，然后磁头读取盘面上的信息。然后磁盘上会有扇区划分，如下图：<br />
+
+![Alt text](./assets/image-1.png)
+
+<br />上面可以看到，一个盘面被划分为多个相等的扇区。然后我们可以给扇区编上号，这样当我们要查找某个文件的时候，操作系统会指名这个文件在几号数据块上，数据块又映射到物理上的扇区上，将真正的数据提取到内存中供CPU调度。
 
 所以回到上面的问题：文件控制块中保存了哪些信息帮助我们去找文件呢？肯定要包含数据块的信息，比如文件存放到1号数据块里，这样操作系统内部在映射到磁盘扇区上。
 
 我们可以再想想，文件控制块中保存的文件信息，起码要有文件名对吧，我们就是靠文件名去目录表里搜索到底是哪个文件的，当然还有我们之前提到的权限，就是权限信息，例如你有可读，可写，还是可以执行的文件的权限。文件大小，文件路径是不是按道理也需要。
 
-我们在命令行可以输入，ls -l命令，就可以看到目录的详细信息。如下图<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603927397-668aa0fd-2e69-46d7-ac9f-4b8d08542e65.png#averageHue=%23ededed&clientId=u217a09e0-35c5-4&from=paste&id=u3898006a&originHeight=316&originWidth=844&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u4f62f75d-f295-4d83-9dd7-78bd0c6c2b8&title=)<br />简而言之，这些保存的文件信息和控制信息，我们称之为FCB，文件控制块（file control block）。在linux中，又被称之为inode表（linux中的存储文件目录的方式是索引分配，比FCB更高级），inode指的是index node，也就是索引节点的意思。
+我们在命令行可以输入，ls -l命令，就可以看到目录的详细信息。如下图<br />
+
+![Alt text](./assets/image-2.png)
+
+<br />简而言之，这些保存的文件信息和控制信息，我们称之为FCB，文件控制块（file control block）。在linux中，又被称之为inode表（linux中的存储文件目录的方式是索引分配，比FCB更高级），inode指的是index node，也就是索引节点的意思。
 
 这就回答了上面的问题，就是数据如何从磁盘读取到内存，其实因为磁盘读取速度比较慢，一般磁盘的数据会存储到一个缓存缓冲区里，然后缓冲区再存到内存里（意思是我先读一大块数据，然后写入内存，而不是一点点的读取，这就是缓冲区的意义），缓冲区对于我们理解node.js中流的使用至关重要，这个在我的node.js 教程中会深入stream的js源码探索。(更详细的文件打开流程，后面会详述)
 
@@ -78,11 +89,19 @@ A文件占据的数据块 | B文件占据的数据块 ｜ C文件占据的数据
 
 但是如果你的文件都是只读的，不能写，其实这种方式也可以。
 
-也就是说，实际上落到磁盘的数据，如果物理上都要求连续存储，其实使用场景是非常有限的，所以我们需要一种非连续分配的方式，我这里直接说一下现代操作系统常用的一种方式吧，就是索引分配<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603927479-15fd8bdc-c221-47d4-83a1-150daf73f51b.png#averageHue=%23f8f8f6&clientId=u217a09e0-35c5-4&from=paste&id=uad2ffe49&originHeight=1100&originWidth=1158&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u5cdb6c07-f914-4ae3-adf3-e8cafd0a50c&title=)<br />这里可以看到，目录表，一般条目里包含存放的是这个文件存储的物理块号在哪里，但索引分配存储的是索引表的地址，在索引表上存储里对应物理块号的哪一个。（还有多级索引表，这里不引申了）
+也就是说，实际上落到磁盘的数据，如果物理上都要求连续存储，其实使用场景是非常有限的，所以我们需要一种非连续分配的方式，我这里直接说一下现代操作系统常用的一种方式吧，就是索引分配<br />
+
+![Alt text](./assets/image-3.png)
+
+<br />这里可以看到，目录表，一般条目里包含存放的是这个文件存储的物理块号在哪里，但索引分配存储的是索引表的地址，在索引表上存储里对应物理块号的哪一个。（还有多级索引表，这里不引申了）
 
 例如，当创建一个文件时，系统会为其建立一个索引表，其中所有的盘块号设置为null。首次写入第i块时，先从空闲表块中取出一块，然后将其地址（即物理块号）写入到索引表的i项中。
 
-它的优点是什么，我们可以进行随机访问，因为存储索引的数据结构在linux的ext4系统里是b树，b树支持随机查找。B树示意图如下（这个不深究了，请看我的mysql高级篇，会讲解B-Tree和B+Tree的区别）。<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603927438-727dd8d8-e79c-4484-a6f2-b2d971617de9.png#averageHue=%23d8c462&clientId=u217a09e0-35c5-4&from=paste&id=u060e449e&originHeight=862&originWidth=1640&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u687ea9a5-cb35-4f86-b20c-ca2f07ac77d&title=)<br />最后我们补充一下文件打开的知识：
+它的优点是什么，我们可以进行随机访问，因为存储索引的数据结构在linux的ext4系统里是b树，b树支持随机查找。B树示意图如下（这个不深究了，请看我的mysql高级篇，会讲解B-Tree和B+Tree的区别）。<br />
+
+![Alt text](./assets/image-4.png)
+
+<br />最后我们补充一下文件打开的知识：
 ## 文件描述符，i-node表，数据存储间的关系
 我们先介绍几个关键信息，系统为维护文件描述符，建立了三个表：
 
@@ -90,7 +109,11 @@ A文件占据的数据块 | B文件占据的数据块 ｜ C文件占据的数据
 - 系统级的文件描述符表
 - 文件系统的i-node表
 
-他们的关系如下图（图片来自网络）：<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603930518-4655fb10-c3a1-4976-bc3e-072f36c9f9fc.png#averageHue=%23edeceb&clientId=u217a09e0-35c5-4&from=paste&id=u047002f0&originHeight=455&originWidth=634&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=uc08f08ba-fc2c-494b-92fc-7d06faab585&title=)<br />每一个进程都维护了一个自己打开哪些文件的表，叫做进程级文件描述符表，例如，在node.js中，调用fs模块的open方法，会返回一个文件描述符，如上图最左侧，文件描述是操作文件很关键的一个凭证，其实它在知识进程打开表的一个索引而已。
+他们的关系如下图（图片来自网络）：<br />
+
+![Alt text](./assets/image-5.png)
+
+<br />每一个进程都维护了一个自己打开哪些文件的表，叫做进程级文件描述符表，例如，在node.js中，调用fs模块的open方法，会返回一个文件描述符，如上图最左侧，文件描述是操作文件很关键的一个凭证，其实它在知识进程打开表的一个索引而已。
 
 操作系统为每一个进程维护了一个文件描述符表，该表的索引值都从从0开始的，所以在不同的进程中可以看到相同的文件描述符，但是否指向同一个文件就不一定了。然后在系统级文件打开表中找到inode指针，最后通过inode指针找到inode表。
 
@@ -98,11 +121,19 @@ A文件占据的数据块 | B文件占据的数据块 ｜ C文件占据的数据
 
 其实这一部分主要想介绍的就是文件系统，接下来我们用一个完整案例，来把上面的知识串到一起。
 ## 本章总结：开机加载数据的过程
-首先，磁盘最开始什么都没有，卖磁盘的厂家会先对磁盘进行低级格式化，也就是划分扇区：<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603930667-fb17ef2f-b30d-4522-8b7f-57b52c213163.png#averageHue=%23f6f5f5&clientId=u217a09e0-35c5-4&from=paste&id=u4b73e3f0&originHeight=482&originWidth=1276&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u960f5d55-ed0f-40a0-9a76-486f091c458&title=)<br />然后装操作系统的过程，会对磁盘进行高级格式化，高级格式化主要目的是在磁盘上装载文件系统，同时会安装引导操作系统启动的引导程序。
+首先，磁盘最开始什么都没有，卖磁盘的厂家会先对磁盘进行低级格式化，也就是划分扇区：<br />
 
-![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603930769-ec463149-93ad-4e77-86b9-662f9e83204a.png#averageHue=%23f5f5f5&clientId=u217a09e0-35c5-4&from=paste&id=ub21e5f04&originHeight=374&originWidth=2414&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u866e2c1e-53c8-4438-8460-22217954d71&title=)<br />可以看到，在第一个扇区，存放着主引导记录，主要包含了磁盘引导程序和分区表。分区表不用说了，这个大家能理解，尤其是windows，我们划分为c盘，d盘什么的。磁盘引导程序一个主要作用就是扫描分区，然后执行主分区里引导程序，在windows一下一般都是c盘，linux则是情况而定。如下：
+![Alt text](./assets/image-6.png)
 
-![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603930714-3be213de-e019-4f44-a408-b026d6b113cd.png#averageHue=%23f5f5f5&clientId=u217a09e0-35c5-4&from=paste&id=u3c32d934&originHeight=876&originWidth=2768&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=ud63c01d5-1f84-4704-b9f2-51b2e7458b3&title=)<br />然后执行主分区里的系统初始化程序，完成“开机”等一系列动作。
+<br />然后装操作系统的过程，会对磁盘进行高级格式化，高级格式化主要目的是在磁盘上装载文件系统，同时会安装引导操作系统启动的引导程序。
+
+![Alt text](./assets/image-7.png)
+
+<br />可以看到，在第一个扇区，存放着主引导记录，主要包含了磁盘引导程序和分区表。分区表不用说了，这个大家能理解，尤其是windows，我们划分为c盘，d盘什么的。磁盘引导程序一个主要作用就是扫描分区，然后执行主分区里引导程序，在windows一下一般都是c盘，linux则是情况而定。如下：
+
+![Alt text](./assets/image-8.png)
+
+<br />然后执行主分区里的系统初始化程序，完成“开机”等一系列动作。
 
 上图可以看到，c盘里的第二个灰色块是超级块，简单来说就是存放硬盘已用空间、数据块可用空间信息等等，说白了就是描述整个文件系统基本信息的。
 
@@ -110,13 +141,21 @@ c盘里的第三个灰色块，就是空闲块管理信息，比如bit map存储
 
 c盘里的第五个灰色块，是根目录，和第四个灰色块就是inode存储区
 
-最后，简单过一下打开文件的过程，首先我们调用node.js中fs模块的open方法，会返回一个文件描述符 -> 我们通过这个文件描述去进程的文件描述符表去找这个文件在系统打开表里的索引 -> 去系统打开表找到inode表里的索引 -> 在inode表找到存储文件的数据块索引 -> 找到跟文件相关的数据块 -> 加载到内存中 -> 返回给应用程序，例如node.js<br />好了，至此，我们简单了解了文件系统和磁盘。不知道有多少人坚持到这里了，送你一个赞<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603931395-a025a077-a307-486f-8f3f-58741d238e8c.png#averageHue=%239a9595&clientId=u217a09e0-35c5-4&from=paste&id=u89359515&originHeight=270&originWidth=270&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u213688a9-eddb-48e6-89ab-e24f6822785&title=)<br />接着来，我们在写前端页面，也就是输入代码的时候，此时其实是键盘这个I/O设备在一个字符一个字符在输入，这期间。
+最后，简单过一下打开文件的过程，首先我们调用node.js中fs模块的open方法，会返回一个文件描述符 -> 我们通过这个文件描述去进程的文件描述符表去找这个文件在系统打开表里的索引 -> 去系统打开表找到inode表里的索引 -> 在inode表找到存储文件的数据块索引 -> 找到跟文件相关的数据块 -> 加载到内存中 -> 返回给应用程序，例如node.js<br />好了，至此，我们简单了解了文件系统和磁盘。不知道有多少人坚持到这里了，送你一个赞<br />
+
+![Alt text](./assets/image-9.png)
+
+<br />接着来，我们在写前端页面，也就是输入代码的时候，此时其实是键盘这个I/O设备在一个字符一个字符在输入，这期间。
 # 计算机是如何让键盘上输入的字符显示到显示器上的呢？
 整个操作系统的目的就是管理硬件资源的， 这里的键盘和显示器都是常见的I/O设备（I/O设备就是能往计算里输入或者输出数据的设备），它们是如何被计算机控制的呢？
 
 这里有个隐藏的小知识点，也就是上面我们谈到磁盘也是I/O设备，而且是块设备，也就读取数据是按数据块来的，而键盘是另一种I/O设备，叫字符设备，它输入数据是按字符来的。cpu其实并不是直接操作I/O设备的，而是通过I/O控制器来控制， 所以这里就有问题了
 ## 为什么CPU控制I/O设备要通过I/O控制器呢？
-这就需要提到人类第一台计算机埃尼阿克，它也要接入I/O设备来输入数据和输出结果，但它连接的线非常多。<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603931423-3a00e46a-5f9b-4664-afae-6997422a919a.png#averageHue=%235c5c5c&clientId=u217a09e0-35c5-4&from=paste&id=u6f73c33e&originHeight=1013&originWidth=1440&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u0b3a8ad5-6c84-40ce-a2f5-bb5ba58d0a1&title=)<br />因为每一种I/O设备控制的方法不一样，不得不给每一个I/O设备专门写控制它们的程序。如果我们统一定一个标准，例如写数据就是用write方法，传参也固定，具体适配由i/o设备的提供商写驱动，这是不是就算比之前给每一个I/O设备专门写控制它们的程序要更标准，也更方便呢。
+这就需要提到人类第一台计算机埃尼阿克，它也要接入I/O设备来输入数据和输出结果，但它连接的线非常多。<br />
+
+![Alt text](./assets/image-10.png)
+
+<br />因为每一种I/O设备控制的方法不一样，不得不给每一个I/O设备专门写控制它们的程序。如果我们统一定一个标准，例如写数据就是用write方法，传参也固定，具体适配由i/o设备的提供商写驱动，这是不是就算比之前给每一个I/O设备专门写控制它们的程序要更标准，也更方便呢。
 
 现在有了I/O控制器，那么
 ## CPU怎么控制I/O设备
@@ -128,7 +167,19 @@ c盘里的第五个灰色块，是根目录，和第四个灰色块就是inode�
 ## 为什么需要中断？
 这就要谈到一些必须具备的基础概念了。
 ## 两种指令、两种处理器状态、两种程序
-假如说一个用户可以随意把服务器上的所有文件删光，这是很危险的。所以有些指令普通用户是不能使用的，只能是权限较高的用户能使用。此时指令就分为了两种，如下图：<br />![](https://cdn.nlark.com/yuque/0/2024/webp/432603/1704603931456-35ec0419-edb4-4ffb-8e41-d0577cf3016e.webp#averageHue=%2399b37b&clientId=u217a09e0-35c5-4&from=paste&id=u93a90c94&originHeight=353&originWidth=1512&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u0c03fa56-b841-4437-884a-c36b9d6d5d5&title=)<br />这就引出一个问题：CPU如何判断当前是否可以执行特权指令？ 如下图: <br />![](https://cdn.nlark.com/yuque/0/2024/webp/432603/1704603931550-b7a66a04-cbc0-4ef3-a27f-cdef6b070df2.webp#averageHue=%2391b171&clientId=u217a09e0-35c5-4&from=paste&id=u7980c8df&originHeight=336&originWidth=1468&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u77680bad-31d2-42c3-bda5-96b9f9eec34&title=)<br />CPU通常有两种工作模式即：内核态和用户态，而在PSW（这个不用管，就知道有一个寄存器的标志位0表示用户态，1表示核心态）中有一个二进制位控制这两种模式。<br />对于应用程序而言，有的程序能执行特权指令，有的程序只能执行非特权指令。所以操作系统里的程序又分为两种：<br />![](https://cdn.nlark.com/yuque/0/2024/webp/432603/1704603931652-1ec7831b-8c8b-4dfa-b5f1-a55b7903b500.webp#averageHue=%23fdfdfd&clientId=u217a09e0-35c5-4&from=paste&id=ue0f5fb55&originHeight=499&originWidth=1512&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u219e8ce5-06ec-4705-bfbc-97cdd3bfcf0&title=)<br />所以说，我们需要一种机制，让用户态的程序能进入内核态执行一些特权指令，这个就是中断其中的一个作用。中断也是用户态到内核态唯一的办法。
+假如说一个用户可以随意把服务器上的所有文件删光，这是很危险的。所以有些指令普通用户是不能使用的，只能是权限较高的用户能使用。此时指令就分为了两种，如下图：<br />
+
+![Alt text](./assets/image-11.png)
+
+<br />这就引出一个问题：CPU如何判断当前是否可以执行特权指令？ 如下图: <br />
+
+![Alt text](./assets/image-12.png)
+
+<br />CPU通常有两种工作模式即：内核态和用户态，而在PSW（这个不用管，就知道有一个寄存器的标志位0表示用户态，1表示核心态）中有一个二进制位控制这两种模式。<br />对于应用程序而言，有的程序能执行特权指令，有的程序只能执行非特权指令。所以操作系统里的程序又分为两种：<br />
+
+![Alt text](./assets/image-13.png)
+
+<br />所以说，我们需要一种机制，让用户态的程序能进入内核态执行一些特权指令，这个就是中断其中的一个作用。中断也是用户态到内核态唯一的办法。
 
 回到我们开始讨论的问题，CPU怎么控制I/O设备，我们说轮询的方式很低效，所以产生了中断。
 
@@ -142,7 +193,11 @@ c盘里的第五个灰色块，是根目录，和第四个灰色块就是inode�
 
 上面的方式主要适用于字节设备，比如键盘，是按字节为单位进行数据传输的。
 
-对于块设备的数据传输，有一种方式叫DMA，如下图<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603932038-408b6ddc-c4dc-4487-9008-91ae2c2cb476.png#averageHue=%23d29265&clientId=u217a09e0-35c5-4&from=paste&id=ufe5c3c03&originHeight=912&originWidth=2666&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=ubd850917-6b59-4b0b-b36e-e1c1ccbb89c&title=)<br />DMA控制器是如何跟CPU交互的呢，它允许外部设备直接跟内存进行数据传输，而无需CPU的干预。
+对于块设备的数据传输，有一种方式叫DMA，如下图<br />
+
+![Alt text](./assets/image-14.png)
+
+<br />DMA控制器是如何跟CPU交互的呢，它允许外部设备直接跟内存进行数据传输，而无需CPU的干预。
 
 cpu指明此次要进行的操作，如读操作，并说明要读入多少数据，数据要存放在内存什么位置等等信息。
 
@@ -155,7 +210,9 @@ fetch(url).then( response=>console.log(response))
 
 其实这也牵扯到常见的面试题，就是tcp的三次握手，这次我们从更底层的角度去看，如何通过网卡这个i/o设备去建立tcp连接。
 
-![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603932019-f36cbb89-b2ac-461f-9209-4ec6dcb672ce.png#averageHue=%23fafafa&clientId=u217a09e0-35c5-4&from=paste&id=uf6840753&originHeight=1550&originWidth=2726&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u4288c24e-31a9-404e-b2b9-1e2b68cf9ac&title=)<br />上图左边是主机1，也就是我们前端的电脑，右边是主机2，也就是后端的电脑。
+![Alt text](./assets/image-15.png)
+
+<br />上图左边是主机1，也就是我们前端的电脑，右边是主机2，也就是后端的电脑。
 
 我们发起请求的时候，先是我们调用fecth请求，浏览器会调用sokcet系统调用，创建一个套接字，网络套接字你可以理解为申请一片内存空间，用来接收和发送数据。
 
@@ -165,7 +222,11 @@ socket系统调用会给用户返回一个fd，也就是文件描述符（指向
 
 最后浏览器通过write调用（把我们fetch函数里传的数据传输出去）数据存通过write调用传输到网卡上，网卡再传输到网络中去。
 ## 总结：用户层软件调用I/O设备的过程
-算是把上面关于io设备的知识做一个串联。<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603932135-f0cc1892-8146-43d5-a3af-61332cbbb8b5.png#averageHue=%23e1cdc4&clientId=u217a09e0-35c5-4&from=paste&id=u9f5fd3b1&originHeight=1174&originWidth=1246&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u4ecb77d6-32be-48bb-ac57-5a4eac6a532&title=)<br />如上图，我们简单描述一下浏览器调用io设备（如上图，用户层软件我们假设位是浏览器）的流程，浏览器肯定可以调用网卡这个设备的，因为我们需要http请求跟后端交互。
+算是把上面关于io设备的知识做一个串联。<br />
+
+![Alt text](./assets/image-16.png)
+
+<br />如上图，我们简单描述一下浏览器调用io设备（如上图，用户层软件我们假设位是浏览器）的流程，浏览器肯定可以调用网卡这个设备的，因为我们需要http请求跟后端交互。
 
 那么最终浏览器调用的是操作系统提供的write函数，这个write函数就是上图的设备独立性软件提供的，也是操作系统提供的。同时它还负责调用相应的驱动程序。
 
@@ -175,7 +236,9 @@ socket系统调用会给用户返回一个fd，也就是文件描述符（指向
 
 这就是一个用户从软件层面再到真实调用物理io设备的流程，当然，我们最终让操作系统完成写网卡这个操作是需要发出中断请求的，从而从用户态进入内核态，让操作系统去完成。相同，当io设备返回数据的时候，比如后端的数据又经过我们的网卡返回的时候，也是需要中断告诉操作系统，此时有数据来了，cpu需要马上安排一下。
 
-好了，到此为止上面简单的介绍了i/o设备的管理，看到这里再给你点个赞<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603932373-fc03d96c-5586-489c-9785-f832dd9e6ffe.png#averageHue=%23d5d9d6&clientId=u217a09e0-35c5-4&from=paste&id=u8060a905&originHeight=600&originWidth=600&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u98537310-3d82-4905-b6e2-7cb336f699c&title=)
+好了，到此为止上面简单的介绍了i/o设备的管理，看到这里再给你点个赞<br />
+
+![Alt text](./assets/image-17.png)
 # 前端代码案例
 上面一直说，无论是i/o设备还是从磁盘读取的数据，最终都要先到内存，才能被cpu调度。我们先来看一个很直接的案例，到底我们写的前端代码是如何存储在内存的。
 
@@ -204,7 +267,11 @@ main();
 - stack：栈用于存放局部变量，函数返回地址
 - heap：堆用于程序运行时动态分配内存
 
-如下图：<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603933010-36d0703b-46fd-47d2-9d5c-022bede047f8.png#averageHue=%23fcfdfb&clientId=u217a09e0-35c5-4&from=paste&id=ube056d23&originHeight=1208&originWidth=2108&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=ue2276490-dc13-491f-99c4-0b483e531d7&title=)<br />之前我们写的前端代码要开始运行了，我们的前端代码是存储在text区域的，对于一些静态语言来说，text是2进制的binary code，而对于javascript这种解释性语言，存储的就是我们写的前端js代码，只有在执行的时候才会去解释和编译为2进制的机器码，再执行。
+如下图：<br />
+
+![Alt text](./assets/image-18.png)
+
+<br />之前我们写的前端代码要开始运行了，我们的前端代码是存储在text区域的，对于一些静态语言来说，text是2进制的binary code，而对于javascript这种解释性语言，存储的就是我们写的前端js代码，只有在执行的时候才会去解释和编译为2进制的机器码，再执行。
 
 我们从上到下执行之前写的前端代码，首先
 ```
@@ -227,7 +294,11 @@ function main(){
 ```
 main();
 ```
-main函数执行，里面代码就开始执行了,只要执行函数，就会把它的返回地址写入到stack中，这样方便我们执行完毕后，再返回到这个函数向下执行。所以此时stack区域是<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603932969-1af4ae75-91cb-45d0-8288-caf3f8971846.png#averageHue=%23fcf7f6&clientId=u217a09e0-35c5-4&from=paste&id=u7aab59b9&originHeight=540&originWidth=386&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u3238f919-2ab1-4549-a48e-0b56e746884&title=)<br />然后执行main函数里的内容
+main函数执行，里面代码就开始执行了,只要执行函数，就会把它的返回地址写入到stack中，这样方便我们执行完毕后，再返回到这个函数向下执行。所以此时stack区域是<br />
+
+![Alt text](./assets/image-19.png)
+
+<br />然后执行main函数里的内容
 ```
 function main(){
     const i = 100;
@@ -235,7 +306,16 @@ function main(){
     return;
 }
 ```
-i变量是局部变量，所以存放在stack区域，然后继续执行g(100)，此时stack区域是这样的<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603932921-3c81cf0e-7fe8-4181-9b13-0f5b756bfbbe.png#averageHue=%23fbecea&clientId=u217a09e0-35c5-4&from=paste&id=u3b1601ad&originHeight=478&originWidth=340&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u6a28f4df-7dd2-4b27-b703-be9ee66773b&title=)<br />然后接着g函数执行，g函数执行后，f函数又开始执行，f函数中声明了一个对象，对象在js语言里是被存放到堆，也就是heap区域，所以此时heap区域就有了数据。此时stack如下图：<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603932991-fd65afc3-6494-4060-9218-357463cec797.png#averageHue=%23fbe6e4&clientId=u217a09e0-35c5-4&from=paste&id=u554ba4ee&originHeight=474&originWidth=356&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u79a52d14-e945-4ed4-9f95-8f184c9c940&title=)<br />每次函数调用的时候，都会把返回地址压入栈（stack）中，那么函数执行完毕，则根据返回地址弹出stack。<br />可是这里有一个很重要的点，就是局部变量x、y和i瞬间就销毁了，但是在heap区域里的数据不是瞬间销毁的，是需要靠垃圾回收机制销毁。<br />这就涉及到内存的回收，我们的操作系统如何回收heap里的数据呢？<br />这里我们延伸一下，看看node.js中的v8引擎是用了什么回收算法（下面主要介绍了分带回收和标记清除算法）。
+i变量是局部变量，所以存放在stack区域，然后继续执行g(100)，此时stack区域是这样的<br />
+
+![Alt text](./assets/image-20.png)
+
+<br />然后接着g函数执行，g函数执行后，f函数又开始执行，f函数中声明了一个对象，对象在js语言里是被存放到堆，也就是heap区域，所以此时heap区域就有了数据。此时stack如下图：<br />
+
+
+![Alt text](./assets/image-21.png)
+
+<br />每次函数调用的时候，都会把返回地址压入栈（stack）中，那么函数执行完毕，则根据返回地址弹出stack。<br />可是这里有一个很重要的点，就是局部变量x、y和i瞬间就销毁了，但是在heap区域里的数据不是瞬间销毁的，是需要靠垃圾回收机制销毁。<br />这就涉及到内存的回收，我们的操作系统如何回收heap里的数据呢？<br />这里我们延伸一下，看看node.js中的v8引擎是用了什么回收算法（下面主要介绍了分带回收和标记清除算法）。
 # 从Node.js 的V8如何使用内存来进入内存知识点
 使用node.js的api : process.memoryUsage(),返回如下
 ```
@@ -247,11 +327,14 @@ external代表V8管理的，绑定到Javascript的C++对象的内存使用情况
 
  rss, 其实就是占用的所有物理内存的大小，是给这个进程分配了多少物理内存，也就是我们上面 提到的，这些物理内存中包含堆，栈，和代码段等等。
 ## V8的内存分代和回收算法请简单讲一讲
-在V8中，主要将内存分为新生代和老生代两代。新生代中的对象存活时间较短的对象，老生代中的对象存活时间较长，或常驻内存的对象。<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603933431-b948c0b0-54ad-4ef5-beb3-3d329c7bdf8d.png#averageHue=%23f3f3f3&clientId=u217a09e0-35c5-4&from=paste&id=uc24ff223&originHeight=83&originWidth=411&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=ubd92ae31-e1c9-4ca7-b545-8f9ae5dfff4&title=)
+在V8中，主要将内存分为新生代和老生代两代。新生代中的对象存活时间较短的对象，老生代中的对象存活时间较长，或常驻内存的对象。<br />
+
+![Alt text](./assets/image-22.png)
+
 #### 新生代
 新生代中的对象主要通过Scavenge算法进行垃圾回收。这是一种采用复制的方式实现的垃圾回收算法。它将堆内存一分为二，每一部分空间成为semispace。在这两个semispace空间中，只有一个处于使用中，另一个处于闲置状态。处于使用状态的semispace空间称为From空间，处于闲置状态的空间称为To空间。
 
-![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603933586-0306c923-197b-41d5-a00f-2d33602f9173.png#averageHue=%23f4f4f4&clientId=u217a09e0-35c5-4&from=paste&id=ue4ec9b46&originHeight=106&originWidth=460&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=ud004236f-04be-4cad-ab6e-04bd99bd352&title=)
+![Alt text](./assets/image-23.png)
 
 - 当开始垃圾回收的时候，会检查From空间中的存活对象，这些存活对象将被复制到To空间中，而非存活对象占用的空间将会被释放。完成复制后，From空间和To空间发生角色对换。
 - 因为新生代中对象的生命周期比较短，就比较适合这个算法。
@@ -259,31 +342,51 @@ external代表V8管理的，绑定到Javascript的C++对象的内存使用情况
 #### 老生代
 老生代主要采取的是标记清除的垃圾回收算法。与Scavenge复制活着的对象不同，标记清除算法在标记阶段遍历堆中的所有对象，并标记活着的对象，只清理死亡对象。活对象在新生代中只占叫小部分，死对象在老生代中只占较小部分，这是为什么采用标记清除算法的原因。
 #### 标记清楚算法的问题
-主要问题是每一次进行标记清除回收后，内存空间会出现不连续的状态<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603933567-3367c59d-eee6-44b4-a9c8-a43970755218.png#averageHue=%23c1c1c1&clientId=u217a09e0-35c5-4&from=paste&id=u80ad196e&originHeight=98&originWidth=414&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=ucfe473bd-1b06-48a3-9d8a-ee8052c2f9f&title=)
+主要问题是每一次进行标记清除回收后，内存空间会出现不连续的状态<br />
+
+![Alt text](./assets/image-24.png)
 
 - 这种内存碎片会对后续内存分配造成问题，很可能出现需要分配一个大对象的情况，这时所有的碎片空间都无法完成此次分配，就会提前触发垃圾回收，而这次回收是不必要的。
 - 为了解决碎片问题，标记整理被提出来。就是在对象被标记死亡后，在整理的过程中，将活着的对象往一端移动，移动完成后，直接清理掉边界外的内存。
 
 到这里，我们了解对前端代码在内存的简单分配和回收有了大致的了解，那么我们现在就要更深入的了解一些关于内存管理的其他知识了。<br />首先
 ## 内存是如何存储数据的呢？
-首先，我们要知道内存也是分块的，我们都知道酒店会有很多房间，房间会有很多编号，其实内存也类似，如下图<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603933729-e7aa79b5-f15e-4851-9614-59f243599b1c.png#averageHue=%238daa66&clientId=u217a09e0-35c5-4&from=paste&id=u387f9dfa&originHeight=1008&originWidth=2552&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=udf0dca8a-6955-4040-af97-db74f1b5499&title=)<br />然后就是具体存放数据了，一般情况下，大家都会想，当然连续存放呗，例如a程序占据内存块1号，b程序占据内存块2号，依次类推。
+首先，我们要知道内存也是分块的，我们都知道酒店会有很多房间，房间会有很多编号，其实内存也类似，如下图<br />
+
+![Alt text](./assets/image-25.png)
+
+<br />然后就是具体存放数据了，一般情况下，大家都会想，当然连续存放呗，例如a程序占据内存块1号，b程序占据内存块2号，依次类推。
 
 这其实是连续存放的思想，连续存放我们在讲磁盘存数据的时候也讲过，连续存放会导致很多严重的问题，例如，a,b,c程序在内存的排放方式如下：
 ```
 A文件占据的内存块 | B文件占据的内存块 ｜ C文件占据的内存块
 ```
-此时，如果A程序产生了很多局部变量，也就是要存放到A程序占有内存的stack区域，因为ABC文件占据内存是连续存放的，我们不得不把B和C往后移动。(是不是跟磁盘管理的案例差不多)<br />所以往往会采取分连续分配内存块的算法。分连续分配有分段和分页算法。这里我们简单介绍一下分页算法，分段算法就不多说了，思想是一样的，在linux操作系统中，其实采取的是类似分页的算法，叫buddy算法，buddy的意思是伙伴，好朋友的意思，所以也叫伙伴算法。<br />分页算法是把内存空间分为一个个大小相等的分区，一般每个分区是4k，我们称之为页框。<br />同时将进程的逻辑地址空间也分为与内存页框相等的一个个部分，我们把每个部分称为“页”，如下图<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603934128-afb21772-4b73-478e-9392-6c22c2dd564a.png#averageHue=%23e8dfd3&clientId=u217a09e0-35c5-4&from=paste&id=u525043f5&originHeight=1384&originWidth=1182&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u3dd306c3-8460-4774-8dd8-10d7cc9f929&title=)<br />所以我们把进程逻辑上的数据分为一个个4kb的块，在内存上任意地方存放，从而实现数据在内存的非连续存放。<br />有的同学肯定想，分散后，我咋知道内存上哪些部分是存放进程A数据的呢？所以我们还需要一个表，记录进程上的逻辑块号，跟内存上的块号的映射关系。<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603934098-8791ef45-4fe3-47db-b2d7-adfc05f18c90.png#averageHue=%23fcfaf9&clientId=u217a09e0-35c5-4&from=paste&id=u0ec231aa&originHeight=682&originWidth=1666&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u045d57f9-75a6-4139-82ab-76a34c76a66&title=)<br />其实真实的分页处理要比这个复杂很多，例如linux的伙伴算法，可以有效的减少内部碎片，还采用了slab分配机制。（更详细内容建议搜索谷歌，不过对我们前端来说不了没啥影响）<br />这里再简单介绍一个知识点，例如我们的计算机内存是8GB，但是一个大型游戏可能有10GB大，显然，内存是不够大，加上我们的电脑同时还运行着很多别的程序，所以我们的计算机到底是怎么做到呢？<br />这也是非常非常重要的一个概念，叫虚拟内存
+此时，如果A程序产生了很多局部变量，也就是要存放到A程序占有内存的stack区域，因为ABC文件占据内存是连续存放的，我们不得不把B和C往后移动。(是不是跟磁盘管理的案例差不多)<br />所以往往会采取分连续分配内存块的算法。分连续分配有分段和分页算法。这里我们简单介绍一下分页算法，分段算法就不多说了，思想是一样的，在linux操作系统中，其实采取的是类似分页的算法，叫buddy算法，buddy的意思是伙伴，好朋友的意思，所以也叫伙伴算法。<br />分页算法是把内存空间分为一个个大小相等的分区，一般每个分区是4k，我们称之为页框。<br />同时将进程的逻辑地址空间也分为与内存页框相等的一个个部分，我们把每个部分称为“页”，如下图<br />
+
+![Alt text](./assets/image-26.png)
+
+<br />所以我们把进程逻辑上的数据分为一个个4kb的块，在内存上任意地方存放，从而实现数据在内存的非连续存放。<br />有的同学肯定想，分散后，我咋知道内存上哪些部分是存放进程A数据的呢？所以我们还需要一个表，记录进程上的逻辑块号，跟内存上的块号的映射关系。<br />
+
+![Alt text](./assets/image-27.png)
+
+<br />其实真实的分页处理要比这个复杂很多，例如linux的伙伴算法，可以有效的减少内部碎片，还采用了slab分配机制。（更详细内容建议搜索谷歌，不过对我们前端来说不了没啥影响）<br />这里再简单介绍一个知识点，例如我们的计算机内存是8GB，但是一个大型游戏可能有10GB大，显然，内存是不够大，加上我们的电脑同时还运行着很多别的程序，所以我们的计算机到底是怎么做到呢？<br />这也是非常非常重要的一个概念，叫虚拟内存
 ## 什么是虚拟内存？为什么需要它？
 虚拟内存 使得应用程序认为它拥有连续的可用的内存（一个连续完整的地址空间），而实际上，它通常是被分隔成多个物理内存碎片，还有部分暂时存储在外部磁盘存储器上，在需要时进行数据交换。<br />举个例子，我们玩的游戏假如有10G,但是目前内存只有4G,实际上我们的计算机只会加载部分游戏数据到内存中，因为全部的游戏数据，在我们当前的画面不会全部用到，我们只把用到的加载进来，这叫做局部性原理，它是指处理器在访问某些数据时短时间内存在重复访问，某些数据或者位置访问的概率极大，大多数时间只访问局部的数据。<br />如果要加载新的页面，例如你玩游戏进入了新的场景，需要加载新的数据，同时也需要把已经在内存的老数据置换出去，就会触发缺页中断，告诉操作系统要置换数据了。<br />此时涉及到置换算法，这里就有一个很常见的置换算法叫LRU页面置换算法，也算是前端面试很常见的leetcode面试题了。
 # 进程和线程
 最后，我们要来讲讲进程和线程了，还是拿我们熟知的前端代码，我们上面已经知道前端代码运行时在内存的表现形式，那么cpu内部是如何一条一条取指令来运行的，这里首先就会有一个问题了，就是指令是什么？
 ## 指令是什么？（了解）
-它是指计算机执行某种操作的命令，是计算机运行的最小功能单位。一台计算机的所有指令的集合构成该机的指令系统，也称为指令集。比如著名的x86架构（intel的pc）和ARM架构（手机）的指令集是不同的。<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603934209-4188096d-c62f-4179-8f78-4a67341707d6.png#averageHue=%23f7f6f3&clientId=u217a09e0-35c5-4&from=paste&id=uf3b67c7a&originHeight=691&originWidth=1512&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u49925dc9-f953-40ae-b348-5202a37ddc5&title=)<br />一条指令就是机器语言的一个语句，它是一组有意义的二进制代码。一条指令通常包括操作码（OP） + 地址码（A）
+它是指计算机执行某种操作的命令，是计算机运行的最小功能单位。一台计算机的所有指令的集合构成该机的指令系统，也称为指令集。比如著名的x86架构（intel的pc）和ARM架构（手机）的指令集是不同的。<br />
+
+![Alt text](./assets/image-28.png)
+
+<br />一条指令就是机器语言的一个语句，它是一组有意义的二进制代码。一条指令通常包括操作码（OP） + 地址码（A）
 
 - 操作码简单来说就是我要进行什么操作，比如我要实现1+1，加法操作，停机操作等等
 - 地址码就是比如实现加法操作的数据地址在哪，通常是内存地址。
 ## cpu是如何去内存取指令，然后一步一步执行的呢？（了解就行）
-首先，是取指令的过程如下<br />![](https://cdn.nlark.com/yuque/0/2024/webp/432603/1704603934219-13561aa4-9d77-4b75-9a74-fe6a5c853f7f.webp#averageHue=%23c8e2eb&clientId=u217a09e0-35c5-4&from=paste&id=u9b9c1c71&originHeight=459&originWidth=989&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u844be8a1-3ae9-4869-b55e-6f7370cb20d&title=)
+首先，是取指令的过程如下<br />
+
+![Alt text](./assets/image-29.png)
 
 - 我们简单描述，就是CPU要知道下一条指令是什么，就必须去存储器（内存）去拿，PC去了存储器的MAR拿要执行的指令地址，MAR（存储器里专门存指令地址的地方）
 - 第二步和第三步，MAR去存储体内拿到指令之后，将指令地址放入MDR(存储器里专门存数据的地方)
@@ -299,14 +402,22 @@ A文件占据的内存块 | B文件占据的内存块 ｜ C文件占据的内存
 - stack：栈用于存放局部变量，函数返回地址
 - heap：堆用于程序运行时动态分配内存
 
-其实还有一个更重要的东西，叫进程控制块（PCB），为什么需要这么一个东西呢，一个程序运行的标志是有进程正在被调度，当一个程序时间片到了切换到另一个时间片到时候，我们是不是保存上一个程序的状态，比如代码在内存哪些地方，引用的文件有哪些（当前进程打开的文件，回顾文件系统篇的内容），进程状态，pid（进程id）等等信息。<br />并且实际进程切换的时候，就是PCB的切换，因为有了PCB，进程的所有信息都可以找到。<br />到此为止，我们知道操作系统调度程序的基本单位是进程。这有什么问题，进程增加的操作系统的并发能力，但是并没有增加单个程序的并发能力，什么意思呢？比如我用qq的时候，是既可以聊天，又可以视频，这是单个程序的并发能力，如何实现呢？<br />这时，我们的线程就登场了，一个进程有多个线程，这样单个程序也具备并发能力了。如下图：如果只有一个线程就入下图的左侧部分，多线程的话就是下图右侧部分。<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603934789-0ab12081-bd04-4089-8900-aab00061bd78.png#averageHue=%23fcfcfa&clientId=u217a09e0-35c5-4&from=paste&id=ue12a122e&originHeight=1042&originWidth=1698&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u0da92789-c3cb-4c5c-93f8-047ce598345&title=)<br />我们可以看到，线程共享了代码段，数据，files（当前打开的哪些文件），pcb等信息。<br />而每个线程单独拥有registers（寄存器空间），stack（栈，放局部变量）<br />跟进程相关的最最常见的node.js相关的两道面试题是：
+其实还有一个更重要的东西，叫进程控制块（PCB），为什么需要这么一个东西呢，一个程序运行的标志是有进程正在被调度，当一个程序时间片到了切换到另一个时间片到时候，我们是不是保存上一个程序的状态，比如代码在内存哪些地方，引用的文件有哪些（当前进程打开的文件，回顾文件系统篇的内容），进程状态，pid（进程id）等等信息。<br />并且实际进程切换的时候，就是PCB的切换，因为有了PCB，进程的所有信息都可以找到。<br />到此为止，我们知道操作系统调度程序的基本单位是进程。这有什么问题，进程增加的操作系统的并发能力，但是并没有增加单个程序的并发能力，什么意思呢？比如我用qq的时候，是既可以聊天，又可以视频，这是单个程序的并发能力，如何实现呢？<br />这时，我们的线程就登场了，一个进程有多个线程，这样单个程序也具备并发能力了。如下图：如果只有一个线程就入下图的左侧部分，多线程的话就是下图右侧部分。<br />
+
+![Alt text](./assets/image-30.png)
+
+<br />我们可以看到，线程共享了代码段，数据，files（当前打开的哪些文件），pcb等信息。<br />而每个线程单独拥有registers（寄存器空间），stack（栈，放局部变量）<br />跟进程相关的最最常见的node.js相关的两道面试题是：
 
 - 进程间通信有哪些方式，并要了解其特点
 - 进程和线程的区别是什么
 ## 进程间通信有哪些方式
-每个进程的用户地址空间都是独立的。通常是不能互相访问。然而，内核空间是每个进程都共享的。因此可以通过内核来在进程间传递信息。<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603934815-b9a1251b-1cbc-4e1a-9957-26e0447bc6df.png#averageHue=%23f2e0bd&clientId=u217a09e0-35c5-4&from=paste&id=u5d550e6c&originHeight=506&originWidth=716&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u0ae5ca10-1336-4f91-bd11-c617287af45&title=)
+每个进程的用户地址空间都是独立的。通常是不能互相访问。然而，内核空间是每个进程都共享的。因此可以通过内核来在进程间传递信息。<br />
+
+![Alt text](./assets/image-31.png)
 ## 共享内存
-共享内存通过将一块虚拟地址空间映射到相同的物理内存中，实现了进程间数据的即时共享。这种方式避免了频繁的拷贝和传输过程，极大地提升了进程间通信的效率。<br />![](https://cdn.nlark.com/yuque/0/2024/png/432603/1704603934924-f8de512d-1ebc-43a4-a9bd-b757e58c410f.png#averageHue=%23f7efe5&clientId=u217a09e0-35c5-4&from=paste&id=u65bd5d1b&originHeight=609&originWidth=714&originalType=url&ratio=2&rotation=0&showTitle=false&status=done&style=none&taskId=u854c52ce-dd49-49b6-afe3-458ba2b22e5&title=)
+共享内存通过将一块虚拟地址空间映射到相同的物理内存中，实现了进程间数据的即时共享。这种方式避免了频繁的拷贝和传输过程，极大地提升了进程间通信的效率。<br />
+
+![Alt text](./assets/image-32.png)
 ## 信号
 在 Linux 操作系统中， 为了响应各种各样的事件，提供了几十种信号，分别代表不同的意义。我们可以通过 kill -l 命令，查看所有的信号：
 ```
@@ -375,7 +486,9 @@ int socket(int domain, int type, int protocal)
 
 4. 内存占用：每个线程都需要独立的堆栈空间和内核数据结构，因此线程的内存占用比较大。而协程可以共享相同的堆栈空间，因此在内存占用方面比较轻量级。
 
-好了，文章结束，能看到这里敬你是条汉子！<br />![image.png](https://cdn.nlark.com/yuque/0/2024/png/432603/1704708709029-4057dcde-ac63-48dc-969c-ca978e464a2d.png#averageHue=%23b4b4b4&clientId=uacc25e50-dfd3-4&from=paste&height=200&id=ub8f4e262&originHeight=400&originWidth=400&originalType=binary&ratio=2&rotation=0&showTitle=false&size=71306&status=done&style=none&taskId=ubb058019-3e62-479e-ad96-7ea50924482&title=&width=200)
+好了，文章结束，能看到这里敬你是条汉子！<br />
+
+![Alt text](./assets/image-33.png)
 
 欢迎了解更多【前端的后端知识体系】。对于前端有一些专家级别的学习资料，例如前端react组件库实现（对标主流react组件库几乎全部功能）。
 
