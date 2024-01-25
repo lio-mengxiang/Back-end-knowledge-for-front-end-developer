@@ -13,7 +13,7 @@
 好了，这里问题是，如果没有操作系统，一个简单的1+1运算，你的js代码还需要考虑这些硬件的协调工作，比如你的代码要协调CPU资源什么时候读取你的代码，什么时候把进程切换到别的进程。。。这些脏活累活都是操作系统帮你屏蔽了，要不这代码可咋写啊。。。
 
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/625bd319664a4c47ac3e09c42af27648~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image.png)
 
 
 ### 弱弱的问一问: 前端学这个干嘛？
@@ -22,8 +22,7 @@
 
 啥也了不说了，兄弟，学习的小车已经粗发了！
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/bed1a16e29e94f2493459b2ac958daa1~tplv-k3u1fbpfcp-zoom-1.image)
-
+![Alt text](./assets2/image-1.png)
 
 ### 2、操作系统运行机制和体系结构
 
@@ -31,7 +30,7 @@
 
 比如说，如下图（简单扫一下即可）：
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/b7e94d10138444fca675d3e78771cd3d~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-2.png)
 
 a+b是一段程序代码，a+b在CPU看来并不能一步完成，可以翻译成如下：
 ```
@@ -48,23 +47,23 @@ ADD C, A, B
 
 假如说一个用户可以随意把服务器上的所有文件删光，这是很危险的。所以有些指令普通用户是不能使用的，只能是`权限较高`的用户能使用。此时指令就分为了两种，如下图：
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/c63454bc3f6d47ada18e16ac8b1448bb~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-3.png)
 
 这就引出一个问题：CPU`如何判断`当前是否可以执行`特权指令`？
 如下图:
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/5ffec6ba8bb84fd3b671562ddaa4dd3a~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-4.png)
 CPU通常有两种工作模式即：`内核态`和`用户态`，而在PSW（这个不用管，就知道有一个寄存器的标志位0表示用户态，1表示核心态）中有一个二进制位控制这两种模式。
 
 
 对于应用程序而言，有的程序能执行特权指令，有的程序只能执行非特权指令。所以操作系统里的程序又分为两种：
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/5e2b1d866079496989d6aa802976c718~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-5.png)
 
 #### 2.2 操作系统内核简单介绍
 
 从下图，我们先看看操作系统内核包含哪些
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/7aad0ff1519c45e88923eac0ca186ff1~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-6.png)
 
 操作系统内核中跟硬件紧密相关的部分有：
 - 时钟管理。操作系统的时钟管理是依靠`硬件定时器`的（具体硬件怎么实现我也不太清楚，好像是靠硬件周期性的产生一个脉冲信号实现的）。时钟管理相当重要，比如我们`获取时间信息`，`进程切换`等等都是要依靠时钟管理。
@@ -76,11 +75,11 @@ CPU通常有两种工作模式即：`内核态`和`用户态`，而在PSW（这�
 - 在程序运行过程中，系统出现了一个必须由CPU立即处理的情况，此时，CPU`暂时中止程序的执行`转而`处理这个新的情况`的过程就叫做`中断`。
 下面举一个例子：
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/bbb1d6ab19194af0990f24f1d4f3b54c~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-7.png)
 第一个应用程序在用户态执行了一段时间后
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/62afac3d324d4d4db8a4e6e594861cfd~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-8.png)
 接着操作系统切换到核心态，处理中断信号
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/ff2fa4931c914df39b70b5165d50e5d4~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-9.png)
 - 操作系统发现`中断的信号`是第一个程序的时间片（每个程序不能一直执行，CPU会给每个程序一定的执行时间，这段时间就是时间片）用完了，应该换第二个应用程序执行了
 - 切换到`第2个进程`后，操作系统会将`CPU`的`使用权`交换给第二个应用程序，接着第二个应用程序就在`用户态`下开始执行。
 - `进程`2需要调用`打印机资源`，这时会执行一个`系统调用`（后面会讲系统调用，这里简单理解为需要操作系统进入核心态处理的函数），让操作系统进入核心态，去调用打印机资源
@@ -100,7 +99,7 @@ CPU通常有两种工作模式即：`内核态`和`用户态`，而在PSW（这�
 接着说之前的范桶同学，小时候不爱学习，每次学习着学习着突然异想天开，回过神来已经过好好长一段时间，这是`内部中断`。想着想着老师走过来，给了范捅一嘴巴，这是`外部中断`。
 
 官方解释如下：
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/6dcf78ddde4945f0b93f7d55952f64da~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-10.png)
 - 内中断常见的情况如`程序非法操作`(比如你要拿的的数据的内存地址不是内存地址，是系统无法识别的地址)，`地址越界`(比如系统给你的程序分配了一些内存，但是你访问的时候超出了你应该访问的内存范围)、`浮点溢出`(比如系统只能表示1.1到5.1的范围，你输入一个100, 超出了计算机能处理的范围)，或者`异常`，`陷入trap`（是指应用程序请求系统调用造成的，什么是系统调用，后面小节会举例讲）。
 - 外中断常见的情况如`I/O中断`（由I/O控制器产生，用于发送信号通知操作完成等信号，比如进程需要请求打印机资源，打印机有一个启动准备的过程，准备好了就会给CPU一个I/O中断，告诉它已经准备好了）、`时钟中断`（由处理器内部的计时器产生，允许操作系统以一定规程执行函数，操作系统每过大约15ms会进行一次线程调度，就是利用时钟中断来实现的）。
 
@@ -117,7 +116,7 @@ CPU通常有两种工作模式即：`内核态`和`用户态`，而在PSW（这�
 
 以下内容简单看一下即可，系统调用的分类：
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/63e2b27cc0914088a2d0357ab332ade7~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-11.png)
 
 需要注意的是，`库函数`和`系统调用`容易混淆。
 - 库是可重用的模块 `处于用户态`
@@ -141,7 +140,7 @@ for (let i = 0; i < cpuNum; ++i) {
 ##### 2.6.1 为什么要引入进程的概念呢？
 
 - 早期的计算机只支持`单道程序`（是指所有进程一个一个排队执行，A进程执行时，CPU、内存、I/O设备全是A进程控制的，等A进程执行完了，才换B进程，然后对应的资源比如CPU、内存这些才能换B用）。
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/85d60c74edfc4e9485fba703f52dd97e~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-12.png)
 - 现代计算机是`多道程序`执行，就是同时看起来有多个程序在一起执行，那每个程序执行都需要系统分配给它资源来执行，比如`CPU`、`内存`。
 - 拿内存来说，操作系统要知道给A程序分配的内存有哪些，给B程序分配的内存有哪些，这些都要有小本本记录下来，这个小本本就是进程的一部分，进程的一大职责就是`记录目前程序运行的状态`。
 - 系统为每个运行的程序配置一个数据结构，称为`进程控制块`（PCB），用来描述进程的各种信息（比如代码段放在哪）。
@@ -151,7 +150,7 @@ for (let i = 0; i < cpuNum; ++i) {
 ##### 2.6.3 PCB有哪些组成
 
 如下图，分别说明一下
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/fad302f1961248dc8489739fd8e28c46~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-13.png)
 
 -  `进程标识符PID`相当于身份证。是在进程被创建时，操作系统会为该进程分配一个唯一的、不重复的ID，`用于区分不同的进程`。
 - 用户标识符`UID`用来表示这个进程`所属的用户`是谁。 
@@ -165,8 +164,7 @@ for (let i = 0; i < cpuNum; ++i) {
 在一个系统中，通常由数十、数百乃至数千个`PCB`。为了对他们加以有效的管理，应该用适当的方式把这些PCB组织起来。这里介绍一种组织方式，类似数据结构里的链表。
 
 
-
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/80201fdf7ce242f18174dcb18ff4b833~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-14.png)
 ##### 2.6.5 进程的状态
 
 `进程是程序的一次执行。`在这个执行过程中，有时进程正在`被CPU处理`，有时又需要`等待CPU服务`，可见，进程的 状态是会有各种变化。为了方便对各个进程的管理，操作系统需要将进程合理地划分为几种状态。
@@ -174,25 +172,25 @@ for (let i = 0; i < cpuNum; ++i) {
 进程的三种基本状态：
 
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/7b732a28a9ad435f8f20b365edd08916~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-15.png)
 
 
 进程的另外两种状态：
 
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/1cea105addf6473da486e64fe6b9be56~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-16.png)
 
 ##### 2.6.6 进程状态的转换
 进程的状态并不是一成不变的，在一定情况下会动态转换。
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/e3ce930479dc4ba0a6fb021198de671d~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-17.png)
 
 以上的这些进程状态的转换是如何实现的呢，这就要引出下一个角色了，叫`原语。
 
 - 原语是`不可被中断`的原子操作。我们举一个例子看看原语是怎么保证不可中断的。
 
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/ca6a27dd09f14178870960ad305ae3ed~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-18.png)
 原语采用`关中断指令`和`开中断指令`实现。
 
 - 首先执行关中断指令
@@ -205,19 +203,19 @@ for (let i = 0; i < cpuNum; ++i) {
 
 因为进程是`分配系统资源的单位`（包括内存地址空间），因此各进程拥有的内存地址空间相互独立。
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/763951d99b6a4ba3992415554d9fec2e~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-19.png)
 
 ##### 2.6.1 进程通信方法---共享存储
 
 因为两个进程的存储空间`不能相互访问`，所以操作系统就提供的一个内存空间让彼此都能访问，这就是共享存储的原理。
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/ca7157b11dd74f8e90dd42f9b5dd9cf4~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-20.png)
 
 其中，介绍一下基于存储区的共享。
 
 - 在内存中画出一块`共享存储区`，数据的形式、存放位置都是由进程控制，而不是操作系统。
 
 ##### 2.6.2 进程通信方法---管道
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/36e3b665bee04bcfbb0a20c359f76c3c~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-21.png)
 
 - 管道数据是以`字符流`（注意不是字节流）的形式写入管道，当管道写满时，写进程的`write()`系统调用将被阻塞，等待读进程将数据取走。当读进程将数据全部取走后，管道变空，此时读进程的`read()`系统调用将被阻塞。
 - 如果没写满就不允许读。如果都没空就不允许写。
@@ -228,11 +226,11 @@ for (let i = 0; i < cpuNum; ++i) {
 
 其中消息是什么意思呢？就好像你发QQ消息，消息头的来源是你，消息体是你发的内容。如下图：
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/66fee389dbd44c39b57d3883ec13f441~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-22.png)
 
 接下来我们介绍一种`间接通信`的方式（很像中介者模式或者发布订阅模式）, 如下图：中介者是信箱，进程通过它来收发消息。
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/5c7ab1f18d704b9fbcebef25447cbc80~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-23.png)
 
 #### 2.7 线程
 
@@ -243,10 +241,10 @@ for (let i = 0; i < cpuNum; ++i) {
 - 但是我们真实的场景是QQ聊天的同时，还可以发文件，还可以视频聊天，这说明如果QQ`没有多线程并发能力`，QQ能够的实用性就大大降低了。所以我们`需要线程`，也就是`需要进程拥有能够并发`多个事件的能力。
 
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/30a1f85b6c474ed794feaa05d758341a~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-24.png)
 
 引入线程后带来的变化
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/b2eeee2b2646477ea6806ca40e8cb1f6~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-25.png)
 
 ### 3 进程的同步和互斥        
 
@@ -254,12 +252,12 @@ for (let i = 0; i < cpuNum; ++i) {
 > 同步。是指多个进程中发生的事件存在某种先后顺序。即某些进程的执行必须先于另一些进程。
 
 比如说`进程A`需要从缓冲区读取`进程B`产生的信息，当缓冲区为空时，`进程B`因为读取不到信息而被阻塞。而当`进程A`产生信息放入缓冲区时，`进程B`才会被唤醒。概念如图1所示。
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/c43bc18cf5524f659a9ecfd8f8ccd5ca~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-26.png)
 
 >互斥。是指多个进程不允许同时使用同一资源。当某个进程使用某种资源的时候，其他进程必须等待。
 
 比如`进程B`需要访问打印机，但此时`进程A`占有了打印机，`进程B`会被阻塞，直到`进程A`释放了打印机资源,进程B才可以继续执行。概念如图3所示。
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/9f49d7a510234059a036db17621e6611~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-27.png)
 
 #### 3.1 信号量（了解概念即可）
 
@@ -304,7 +302,7 @@ void singal (semaphore S) {
 
 为什么要讲这个呢，主要是node的流的机制，本质就是生产者消费者问题，可以简单的看看这个问题如何解决。
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/e1e2c682268d41ca8c83534fa084a99c~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-28.png)
 如上图，`生产者`的主要作用是生成`一定量的数据放到缓冲区中`，然后`重复此过程`。与此同时，消费者也在`缓冲区消耗这些数据`。该问题的关键就是要保证生产者不会在缓冲区满时加入数据，消费者也不会在缓冲区中空时消耗数据。
 
 这里我们需要两个同步信号量和一个互斥信号量
@@ -368,7 +366,7 @@ producer () {
 - 是通过给`内存的存储单元编址`实现的。（存储单元一般是以字节为单位）
 - 如下图，内存的存储单元，就像一个酒店的房间，都有编号，比如程序一的数据都在1楼，1楼1号存储着程序里`let a = 1`这段代码。
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/3a38ed59e7b0490d8cf33f1918aad2b3~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-29.png)
 
 
 #### 4.2 内存管理-内存空间的分配与回收
@@ -380,27 +378,27 @@ producer () {
 
 - 什么是动态分区分配呢，这种分配方式`不会预先划分内存分区`，而是在进程装入内存时，根据进程的大小`动态地`建立分区，并使分区的大小`正好适合`进程的需要。（比如，某计算机内存大小64MB，系统区8MB，用户区56MB...，现在我们有几个进程要装入内存，如下图）
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/ffd33160b37145b1b88cac9291623cac~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-30.png)
 
 - 随之而来的问题就是，如果此时进程1使用完了，相应在内存上的数据也被删除了，那么`空闲的区域`，后面该怎么分配（也就是说随着进程退出，会有很多空闲的内存区域出现）
 
 我们讲一种较为简单的处理方法叫`空闲分区表`法来解决这个问题。如下图，右侧的表格就是一个空闲分区表。
 
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/a68dfb01459c42c6903079072272157d~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-31.png)
 
 当很多个空闲分区都能满足需求时，应该选择哪个分区进行分配呢，例如下图，分别有`20MB`，`10MB`，`4MB`三个空闲分区块，现在`进程5`需要`4MB`空闲分区，改怎么分配呢？
 
 我们需要按照一定的动态分区分配算法，比如有`首次适应算法`，指的是每次都从低地址开始查找，找到第一个能满足大小的空闲分区。还有比如`最佳适应算法`，指的是从空闲分区表中找到最小的适合分配的分区块来满足需求。
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/b26aa3c975264ceea6d3ed652d1c6614~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-32.png)
 
 
 `连续分配缺点很明显`，大多数情况，需要分配的进程大小，不能跟空闲分区剩下的大小完全一样，这样就产生很多很难利用的`内存碎片`。
 
 这里我们介绍一种更好的空闲分区的分配方法，`基本分页存储`。如下图
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/dd268e0a431a4b15ae4296bfca89694a~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-33.png)
 将内存空间分为`一个个大小相等`的分区（比如：每个分区`4KB`）.每个分区就是一个`“页框”`。页框号从`0`开始。
 
 将用户进程的地址空间分为与页框大小相等的一个个区域，称为`“页”`。每个页也是从`0`开始。
@@ -416,7 +414,7 @@ producer () {
 
 #### 5.1 文件的属性
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/e6421765e1ce4a9cb65e43d141024eb7~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-34.png)
 - 文件名。即文件的名字，需要注意的是，同一目录下`不允许`有重名的文件。
 - 标识符。操作系统用于区分各个文件的一种`内部的名称`。
 - 类型。文件的类型。
@@ -428,18 +426,18 @@ producer () {
 
 如下图，文件主要分为`有结构文件`和`无结构文件`。
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/3f1af8437fa94756b1b43fd6bf33b192~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-35.png)
 
 #### 5.3 文件之间如何组织起来
 通过`树状结构`组织的。例如`windows`的文件间的组织关系如下：
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/432b2dcbf38c4a8980f4870e1d6b4c9c~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-36.png)
 
 接下来我们详细的了解一下`文件的逻辑结构`
 #### 5.4 文件的逻辑结构
 逻辑结构是指，在用户看来，文件内部的数据是如何组织起来的，而`“物理结构”`是在操作系统看来，文件是如何保存在外存，比如`硬盘`中的。
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/70dc16b172314e5db51fc5d04d8a064e~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-37.png)
 
 比如，`“线性表”`就是一种逻辑结构，在用户看来，线性表就是一组有先后关系的元素序列，如：`a,b,c,d,e....`
 
@@ -453,7 +451,7 @@ producer () {
 
 指的是文件中的记录一个接一个地在逻辑上是`顺序排列`，记录可以是`定长`或`变长`，各个记录在物理上可以`顺序存储`或`链式存储`
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/a5a6f71703a849c3a2a3b3d10f521481~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-38.png)
 
 - 顺序文件按结构来划分，可以分为`串结构`和`顺序结构`。
 - 串结构是指记录之间的顺序与`关键字无关`，通常都是按照记录的时间决定记录的顺序。
@@ -465,12 +463,12 @@ producer () {
 
 可以看到，顺序文件按顺序存放对于查找是非常有帮助的，我们在记录文件的时候也可以注意利用这一点。
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/0d09c18951374a87b2add0bd911adb45~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-39.png)
 
 #####  5.4.2 索引文件
 对于`可变长记录文件`，要找到`第i`个记录，必须先顺序查找`前i-1`个记录（也就是需要遍历一遍），但是很多场景中又必须使用可变长记录，如何解决这个问题呢？这就引出来马上讲的`索引文件`
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/63a6c065b6404ad7a095d76fa7427be5~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-40.png)
 - 给这些变长的记录都用一张索引表来记录，一个索引表项包括了`索引号`，`长度`和`指针`。
 
 
@@ -482,7 +480,7 @@ producer () {
 
 索引顺序文件是`索引文件`和`顺序文件`思想的结合。索引顺序文件中，同样会为文件建立一张索引表，但不同的是，并不是每个记录对应一个`索引表项`，而是一组记录对应一个索引表项。
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/0a70b298461f4e84970428384a9d3e45~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-41.png)
 
 如上图，学生记录按照学生姓名的开头字母进行分组。每个分组就是一个顺序文件，分组内的记录不需要按关键字排序
 
@@ -490,7 +488,7 @@ producer () {
 
 首先，我们需要了解一下`文件控制`块是什么。我们假设目前在`windows的D盘`，如下图
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/ae80fe1578784a6abf0649f7e404d215~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-42.png)
 
 可以看到，目录本身就是一种`有结构的文件`，记录了目录里的`文件`和`目录`的信息，比如名称和类型。而这些一条条的记录就是一个个的`“文件控制块”（FCB）`。
 
@@ -498,7 +496,7 @@ producer () {
 文件目录的结构通常是`树状的`，例如linux里`/`是指根路径，`/home`是根路径下的二级目录
 
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/3f8e8b78cf9a43bd8ec0e3913eb69d53~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-43.png)
 
 - 需要注意的是，树状目录`不容易实现文件共享`，所以在树形目录结构的基础上，增加了一些指向同一节点的有向边（可以简单理解为引用关系，就跟js里的对象一样）
 - 也就是说需要为`每个共享节点`设置一个`共享计数器`，用于记录此时有多少个地方在共享该结点。只有`共享计数器减为0`，才删除该节点。
@@ -511,7 +509,7 @@ producer () {
 索引分配允许文件离散地分配在各个磁盘块中，系统会为每个文件建立一张索引表，索引表记录了文件各个逻辑块对应的物理块。索引表存放的磁盘块称为索引快。文件数据存放的磁盘块称为数据块。
 
 
-![截屏2021-07-30 上午8.48.45.png](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/bc8174ebcc114535bba6c176aa994c2e~tplv-k3u1fbpfcp-watermark.image)
+![Alt text](./assets2/image-44.png)
 
 如上图，假设某个新创建的文件'aaa'的数据依次存放磁盘块2->5->13>9。7号磁盘块作为’aaa‘的索引块，索引块保存了索引表的内容
 
@@ -527,18 +525,18 @@ producer () {
 #### 5.6 文件存储空间管理
 首先，我们了解一下磁盘分为`目录区`和`文件区`。
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/52b8b0a5f7a3429086355bc4d270f413~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-45.png)
 
 接着，我们了解一下常见的两种`文件存储空间的管理算法`，如下图，假如硬盘上`空闲的数据块`是蓝色，`非空闲的数据`块是橙色。
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/6cd7a2957b11495c9cdb1f36fe8a6da0~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-46.png)
 
 
 对分配连续的存储空间，可以采用`空闲表法`（只讲这种较简单的方法）来`分配`和`回收`磁盘块。对于分配，可以采用首次适应，最佳适应等算法来决定要为文件分配哪个区间。（空闲表表示如下）
 
 
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/efaf172946114c8eb87b30a2ea169879~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-47.png)
 - `首次适应`是指当要插入数据的时候，空闲表会依次检查空闲表中的表项，然后找到`第一个满足条件`的空闲区间。
 
 - `最佳适应算法`是指当要插入数据的时候，空闲表会依次检查空闲表中的表项，然后找到`满足条件而且空闲块最小的空闲区间`。
@@ -547,14 +545,14 @@ producer () {
 
 如下图：
 
-![image.png](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/8bb290ae36894a6f9c1403c4957b7bc3~tplv-k3u1fbpfcp-watermark.image)
+![Alt text](./assets2/image-48.png)
 
 每一个二进制位对应一个磁盘块，比如上面0表示空闲块，1表示已分配的块。而且我们可以通过一定的公式，可以从示图表的横纵坐标推断出物理块的实际地址，也可以从物理块的实际地址推断出在表里的横纵坐标。
 
 #### 5.7 文件共享
 文件共享分为两种
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/678a819dc59c46cba3266249aa5ba27e~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-49.png)
 - 注意，多个用户`共享同一个文件`，意味着系统只有`“一份”`文件数据。并且只要某个用户修改了该文件的数据，其他用户也可以看到`文件的变化`。
 
 - 软连接可以理解为`windows`里的`快捷方式`。
@@ -567,7 +565,7 @@ producer () {
 - 加密保护。使用某个`"密码"`对文件进行加密，在访问文件时需要提供`正确的“密码”`才能对文件进行正确的解密。
 - 访问控制。在每个文件的FCB或者索引节点种增加一个`访问控制列表`，该表中记录了各个用户可以对该文件执行哪些操作。
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/d8b30ba5541246ad90018aedce215a26~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-50.png)
 
 
 
@@ -581,14 +579,14 @@ producer () {
 - 空闲分区管理 --- 位示图法
 
 那么我们假设0号磁盘块就是装载位示图的磁盘块，用来管理哪些磁盘是空闲的哪些是正在使用的。
-<img src="https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/5129b71fdcb34e3ab49b2de7469215ba~tplv-k3u1fbpfcp-watermark.image" width=600>
+![Alt text](./assets2/image-51.png)
 
 
 因为这里我们已经使用了0号块，位示图的第一项就是1
 
 接着我们把磁盘块第二块用来放inode节点，也就是文件目录索引节点，意思是文件目录下存放的只有文件名和索引节点的位置，要知道文件的详细信息，就要靠着
 
-<img src="https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/68935b04dd884171a13dd36c3584b73a~tplv-k3u1fbpfcp-watermark.image" width=600>
+![Alt text](./assets2/image-52.png)
 
 
 假设2号磁盘块存放了我们根目录信息，而本身目录其实也是一种特殊的文件，也在inode节点表里有自己的信息，1号磁盘块增加类似如下信息：
@@ -625,16 +623,16 @@ inode结点：2
 > 什么是I/O设备
 
 I/O就是`输入输出`(Input/Output)的意思，I/O设备就是可以将数据输入到计算机，或者可以接收计算机输出数据的外部设备，属于计算机中的硬件部件。
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/536eb5ac39434f8b8af6854229cca78a~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-53.png)
 #### 6.1 I/O设备分类--按使用特性
 
 - 人机交互类设备，这类设备传输数据的速度慢
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/dcdfaebb040f4233be5f864b00905eae~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-54.png)
 
 - 存储设备，这类设备传输数据的速度较快
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/89c845739cd242ea867cdc3a519fa784~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-55.png)
 
 - 网络通信设备，这类设备的传输速度介于人机交互设备和存储设备之间
 
@@ -643,7 +641,7 @@ I/O就是`输入输出`(Input/Output)的意思，I/O设备就是可以将数据�
 CPU无法直接控制`I/O设备的机械部件`，因此I/O设备还要有一个电子部件作为`CPU`和`I/O设备`机械部件之间的`“中介”`，用于实现CPU对设备的控制。这个电子部件就是`I/O控制器`。
 
 
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/3c4431903aa8475688e9b181938a4e85~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-56.png)
 - 接收和识别CPU发出的指令是指，比如CPU发来读取文件的命令，I/O控制器中会有相应的`控制寄存器`来存放命令和参数
 - 向cpu报告设备的状态是指，I/O控制器会有相应的`状态寄存器`，用来记录I/O设备`是否空闲`或者`忙碌`
 - 数据交换是指I/O控制器会设置相应的`数据寄存器`。输出时，数据寄存器用于`暂存CPU发来的数据`，之后再由控制器传送给设备。
@@ -654,7 +652,7 @@ CPU无法直接控制`I/O设备的机械部件`，因此I/O设备还要有一个
 - 这里我们指讲一下目前比较先进的方式，通道控制方式。
 
 - 通道可以理解为一种`“弱鸡版CPU”`。通道可以识别并执行一系列通道指令。
-![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/1321294866e34aa99674e26e8780d7e2~tplv-k3u1fbpfcp-zoom-1.image)
+![Alt text](./assets2/image-57.png)
 
 通道最大的优点是极大的`减少了CPU的干预频率`，`I/O设备`完成任务，通道会向CPU发出`中断`，不需要轮询来问I/O设备是否完成CPU下达的任务。
 

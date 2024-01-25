@@ -1,24 +1,45 @@
-## [计算机基础小册](/src/basic.md)
+# 计算机基础面试题
 
-- [计算机组成原理](/src/jsjzcyl.md)
-  - 字节面试题
-    - 什么是补码？有什么用？
-    - 一个中文占多少字节？这个跟编码有什么关系？Unicode 跟编码有什么关系？js 是什么编码？
-    - 为什么 0.1 + 0.2 不等于 0.3？请结合 IEEE 标准来说
-  - 阿里面试题
-    - CPU 和 GPU 的区别，前端如何利用 GPU 加速？
-    - I/O 是什么？知道 I/O 设备的演进过程吗？
-- [计算机网络](/src/basic.md)
-  - 阿里面试题
-    - 参考我这之前写的文章[阿里面试官的”说一下从 url 输入到返回请求的过程“问的难度就是不一样！](https://juejin.cn/post/6928677404332425223)
-- [操作系统](/src/basic.md)
-  - 腾讯面试题（面试火花思维也遇到过）
-    - 进程、线程、协程的区别
-    - 进程间通信的方式
-    - 为什么要有文件描述符
-    - PCB 和 FCB 分别指什么，包含哪些内容
-- [数据结构和算法](/src/alg.md)
+## 简述
 
+为什么需要了解计算机基础知识, 没有基本的计算机基础，比如基本的 node api 和一些后端常见的概念，比如进程，线程都会有很大的困难，所以了解基本计算机基础知识是必修。
+
+之前在下总结了一下这部分的基础知识，深度适合没有基础的前端同学。
+
+欢迎加我微信，进群一起学习：
+
+<img src="./src/image.wx.png" width=“300” height="300">
+
+## 计算机组成原理基础知识 + 面试真题
+
+- [基础知识](./src/basic-of-computer/principles-of-computer-composition/principles-of-computer-composition.zh.md)
+- [面试题](./src/basic-of-computer/principles-of-computer-composition/principles-of-computer-composition-interview.zh.md)
+  - 字符编码相关：一个中文占多少字节？Unicode 跟编码有什么关系？js 是什么编码？
+  - 为什么 0.1 + 0.2 不等于 0.3？为什么 0.1 + 0.1 等于 0.2 ？请结合 IEEE 标准来说，如何避免这种计算误差？
+  - ...
+
+## 计算机网络基础知识 + 面试真题
+
+- [基础知识](./src/basic-of-computer/computer-network/computer-network.zh.md)
+- [面试题](./src/basic-of-computer/computer-network/computer-network.interview.zh.md)
+  - HTTPS 一定安全可靠吗？
+  - url编码规则是什么？
+  - 为什么Tcp 2次握手不行？什么是泛洪攻击？Tcp的安全可靠，不丢不重是如何做到的？
+
+
+## 操作系统基础知识 + 面试真题
+
+- [基础知识](./src/basic-of-computer/system-operation/system-operation.zh.md)
+- [面试题](./src/basic-of-computer/system-operation/system-operation.interview.zh.md)
+  - 进程和线程的区别与联系？
+  - 为什么要有文件描述符？
+  - 信号是什么? linux中kill命令默认发送的信号是什么，kill -9发送的信号是什么？
+
+
+## 算法leetcode简单题88道
+
+- [上半部分](./src/basic-of-computer/algorithms/leetcode-simple-44-2.md)
+- [下半部分](./src/basic-of-computer/algorithms/leetcode-simple-44-1.md)
   - 美团面试题
     - 有效的字母异位词
     - 杨辉三角
@@ -26,11 +47,51 @@
     - 合并两个有序数组
     - 二叉树层次遍历
 
-- [linux](/src/linux.md)
-  - linux 这边常用的查看日志的指令
+
+## 算法leetcode中等题
+
+- [待更新...]
+
+# Linux相关
+
+## 简述
+
+你想玩全栈，Linux基础知识必须掌握，建议至少掌握到中级的水平，而且这些属于死记硬背的知识。这点努力都不愿意付出，就别谈学习后端知识了。
+
+## Linux基础知识
+
+- [基础知识](./src/basic-of-computer/linux.interview.zh.md)
+- [面试题](./src/basic-of-computer/linux.interview.zh.md)
+  - linux 这边常用的查看日志的指令？
   - linux 下进程间通信方式？管道、共享内存什么场景下会用？两个进程不在同一个机器如何通信？
   - 何查看 linux 进程信息，其中 vsz 和 rss 有什么区别？
-    - [more](/src/linux.md)
+
+
+## Shell脚本基础
+
+复杂的Shell脚本，建议直接用node.js去写（会python的也是py优先），但是简单的脚本还是要会写
+
+- [待更新。。。]
+
+
+## 小公司业务架构
+
+主要包含的技术： 
+- nginx做4层或者7层负载均衡
+- 搭建nfs存储服务
+- 搭建back up备份服务
+- ssh免密登录
+- 防火墙iptables
+
+这些技术后期在学习k8s后，部分服务会跑在k8s中，并在k8s章节添加监控服务 + 日志服务，其实监控和日志细分的话太多了，我们做的可能比较粗糙，如果做的很专业，会花费巨大的精力，而且小公司架构确实也用不着，毕竟需要一个团队去维护单独的日志服务或者监控服务。
+
+![Alt text](./src/linux/image.png)
+
+如果有对ci/cd感兴趣的，请看我的ci/cd教程
+
+- [待更新。。。]
+
+# Javascript相关
 
 ## [Js 基础问题](/src/common.md)
 
