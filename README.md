@@ -60,7 +60,7 @@
 
 ## Linux基础知识
 
-- [基础知识](./src/linux/linux.interview.zh.md)
+- [基础知识](./src/linux/linux.zh.md)
 - [面试题](./src/linux/linux.interview.zh.md)
   - linux 这边常用的查看日志的指令？
   - linux 下进程间通信方式？管道、共享内存什么场景下会用？两个进程不在同一个机器如何通信？
