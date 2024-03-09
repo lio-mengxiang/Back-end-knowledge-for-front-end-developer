@@ -1605,3 +1605,234 @@ sshd  7703 root 3u  IPv6  6499 TCP *:ssh  (LISTEN)
 sshd  7892 root 3u  IPv6  6757 TCP 10.10.1.5:ssh->192.168.1.5:49901  (ESTABLISHED)
 
 ```
+
+
+## 额外补充
+
+### uname 命令 
+
+- -s, --kernel-name        输出内核名称（区分操作系统），例如 Linux, Darwin
+- -m, --machine            输出主机的硬件架构名称, 例如 x86_64
+
+
+### type命令
+
+主要功能：主要用来结合help命令，用于判断命令的类型（属于内部命令还是外部命令）
+
+```bash
+[root@linuxcool ~]# type cd
+cd is a shell builtin
+```
+
+所有内置命令包含：
+```bash
+GNU bash, version 4.1.5(1)-release (x86_64-pc-linux-gnu)
+These shell commands are defined internally.  Type `help' to see this list.
+Type `help name' to find out more about the function `name'.
+Use `info bash' to find out more about the shell in general.
+Use `man -k' or `info' to find out more about commands not in this list.
+A star (*) next to a name means that the command is disabled.
+ job_spec [&]                            history [-c] [-d offset] [n] or hist>
+ (( expression ))                        if COMMANDS; then COMMANDS; [ elif C>
+ . filename [arguments]                  jobs [-lnprs] [jobspec ...] or jobs >
+ :                                       kill [-s sigspec | -n signum | -sigs>
+ [ arg... ]                              let arg [arg ...]
+ [[ expression ]]                        local [option] name[=value] ...
+ alias [-p] [name[=value] ... ]          logout [n]
+ bg [job_spec ...]                       mapfile [-n count] [-O origin] [-s c>
+ bind [-lpvsPVS] [-m keymap] [-f filen>  popd [-n] [+N | -N]
+ break [n]                               printf [-v var] format [arguments]
+ builtin [shell-builtin [arg ...]]       pushd [-n] [+N | -N | dir]
+ caller [expr]                           pwd [-LP]
+ case WORD in [PATTERN [| PATTERN]...)>  read [-ers] [-a array] [-d delim] [->
+ cd [-L|-P] [dir]                        readarray [-n count] [-O origin] [-s>
+ command [-pVv] command [arg ...]        readonly [-af] [name[=value] ...] or>
+ compgen [-abcdefgjksuv] [-o option]  >  return [n]
+ complete [-abcdefgjksuv] [-pr] [-DE] >  select NAME [in WORDS ... ;] do COMM>
+ compopt [-o|+o option] [-DE] [name ..>  set [--abefhkmnptuvxBCHP] [-o option>
+ continue [n]                            shift [n]
+ coproc [NAME] command [redirections]    shopt [-pqsu] [-o] [optname ...]
+ declare [-aAfFilrtux] [-p] [name[=val>  source filename [arguments]
+ dirs [-clpv] [+N] [-N]                  suspend [-f]
+ disown [-h] [-ar] [jobspec ...]         test [expr]
+ echo [-neE] [arg ...]                   time [-p] pipeline
+ enable [-a] [-dnps] [-f filename] [na>  times
+ eval [arg ...]                          trap [-lp] [[arg] signal_spec ...]
+ exec [-cl] [-a name] [command [argume>  true
+ exit [n]                                type [-afptP] name [name ...]
+ export [-fn] [name[=value] ...] or ex>  typeset [-aAfFilrtux] [-p] name[=val>
+ false                                   ulimit [-SHacdefilmnpqrstuvx] [limit>
+ fc [-e ename] [-lnr] [first] [last] o>  umask [-p] [-S] [mode]
+ fg [job_spec]                           unalias [-a] name [name ...]
+ for NAME [in WORDS ... ] ; do COMMAND>  unset [-f] [-v] [name ...]
+ for (( exp1; exp2; exp3 )); do COMMAN>  until COMMANDS; do COMMANDS; done
+ function name { COMMANDS ; } or name >  variables - Names and meanings of so>
+ getopts optstring name [arg]            wait [id]
+ hash [-lr] [-p pathname] [-dt] [name >  while COMMANDS; do COMMANDS; done
+ help [-dms] [pattern ...]               { COMMANDS ; }
+```
+
+## hostnamectl
+
+可以用来设置 hostname
+案例：把计算机的主机名称永久设置为yunwei.itcast.cn
+
+```bash
+hostnamectl --static set-hostname yunwei.itcast.cn
+```
+
+## cp 
+
+cp复制文件夹到指定路径
+
+cp -r 源文件夹名称 目标路径/
+
+## vim
+
+末行模式，显示行号
+```bash
+:set nu
+nu = number，行号
+```
+取消行号 => :set nonu
+
+针对整个文档中的所有关键词进行替换（只要满足条件就进行替换操作）
+```bash
+:%s/要替换的关键词/替换后的关键词/g
+```
+
+## du命令
+基本语法：
+
+### du [选项] 统计的文件或文件夹
+选项说明：
+-s ：summaries，只显示汇总的大小，统计文件夹的大小
+-h ：以较高的可读性显示文件或文件夹的大小，（KB/MB/GB/TB)
+
+主要功能：查看文件或目录(会递归显示子目录)占用磁盘空间大小
+
+案例：显示readme.txt文件的大小（占用磁盘空间，不显示文件大小的单位）
+
+### du readme.txt
+
+案例：显示readme.txt文件的大小（占用磁盘空间，显示文件大小的单位）
+```bash
+### du -h readme.txt
+```
+案例：统计wechat文件夹的大小
+```bash
+du -sh wechat
+```
+
+## find 模糊查询
+
+find实现模糊查询（必须结合通配符）
+
+案例：搜索/var/log目录下的所有的以".log"结尾的文件信息
+```bash
+find /var/log -name "*.log" -type f
+```
+* ：通配符，代表任意个任意字符。如*.log代表以.log结尾的文件，apache*代表搜索以apache开头的文件信息
+
+grep命令
+基本语法：
+
+## grep [选项] 要搜索的关键词 搜索的文件名称
+选项说明：
+-n ：代表显示包含关键词的行号信息
+
+单位：行，一行一行向下搜索
+
+主要功能：在文件中直接找到包含指定关键词的那些行，并把这些信息高亮显示出来
+
+案例：在initial-setup-ks.cfg文件中搜索包含关键词"network"的行
+```bash
+grep network initial-setup-ks.cfg
+```
+案例：在initial-setup-ks.cfg文件中搜索包含关键词"network"的行，然后显示行号信息
+```bash
+grep -n network initial-setup-ks.cfg
+```
+扩展语法：
+
+### grep 要搜索的关键词 多个文件的名称
+
+主要功能：在多个文件中查找包含指定关键词的那些行，并高亮显示出来
+
+案例：搜索/var/log目录下所有文件，找到包含关键词"network"的所有行信息
+```bash
+grep network /var/log/*
+```
+
+用户信息查询
+基本语法：
+
+## id 用户名称
+
+主要功能：查询某个指定的用户信息
+
+案例：查询linuxuser用户的信息
+
+```bash
+id linuxuser
+
+uid=1002(linuxuser) gid=1005(linuxuser) groups=1005(linuxuser)
+uid：用户编号
+gid：用户所属的主组的编号
+groups：用户的主组以及附属组信息，第一个是主组，后面的都是附属组或附加组信息
+```
+
+## xargs命令
+
+问题：为什么需要xargs命令？
+
+答：之所以能用到这个命令，关键是由于很多命令不支持 | 管道来传递参数，而日常工作中又有这个必要，所以就有了 xargs 命令。
+
+简单来说，xargs命令就相当于对管道命令进行了一个扩展，让所有命令都支持管道
+
+案例：搜索/etc目录下的所有".conf"结尾的文件信息，然后以详细列表形式显示
+```bash
+find /etc -name "*.conf" | ls -l
+```
+解决方案，在ls命令之前添加一个xargs命令，这样ls命令就支持管道了，可以用于接收前一个命令的执行结果
+```bash
+find /etc -name "*.conf" | xargs ls -l
+```
+
+常见不支持标准输入流的命令有：
+- ls：用于列出目录内容，通常不接受标准输入流。
+- mkdir：用于创建目录，通常不接受标准输入流。
+- touch：用于创建空文件或更新文件的时间戳，通常不接受标准输入流。
+- rm：用于删除文件或目录，通常不接受标准输入流。
+- cp：用于复制文件或目录，通常不接受标准输入流。
+- mv：用于移动文件或目录，通常不接受标准输入流。
+- cat：用于连接文件并打印到标准输出，通常可以接受标准输入流，但通常不以此为主要用途。
+- echo：用于打印文本字符串到标准输出，通常不接受标准输入流。
+
+## NTP时间同步操作
+
+### 手工同步
+基本语法：
+
+### ntpdate NTP服务器的IP地址或域名
+
+案例：从NTP服务器中同步系统时间
+```bash
+ntpdate cn.ntp.org.cn
+```
+### 自动同步
+基本语法：
+
+```bash
+① 启动ntpd服务
+systemctl start ntpd
+② 把ntpd服务追加到系统开机启动项中
+systemctl enable ntpd
+```
+问题1：启动ntpd服务后，是不是时间就自动同步了？
+
+启动后就自动同步了
+
+问题2：需不需要让ntpd服务，开机自动运行？
+
+需要
